@@ -33,7 +33,9 @@ dependencies:
 
   google_fonts: ^8.0.2
   just_audio: ^0.9.40
+  just_audio_background: ^0.0.1-beta.13
   flutter_riverpod: ^2.5.1
+  audio_session: ^0.1.25
 
 dev_dependencies:
   flutter_test:
@@ -56,9 +58,6 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
-
-  assets:
-    - assets/images/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
