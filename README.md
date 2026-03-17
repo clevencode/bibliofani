@@ -2,6 +2,10 @@
 
 A new Flutter project.
 
+## Documentacao interna
+
+- Logica de stream: `docs/stream-logic.md`
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.

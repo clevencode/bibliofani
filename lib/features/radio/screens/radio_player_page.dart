@@ -1,100 +1,120 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:meu_app/features/radio/services/radio_player_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meu_app/features/radio/services/radio_player_controller.dart';
 import 'package:meu_app/features/radio/widgets/play_button.dart';
 
 const Color _uiAccent = Color(0xFF00260F);
+const Color _screenBg = Color(0x80808080);
 
-class RadioPlayerPage extends StatefulWidget {
+class RadioPlayerPage extends ConsumerWidget {
   const RadioPlayerPage({super.key});
 
   @override
-  State<RadioPlayerPage> createState() => _RadioPlayerPageState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(radioPlayerProvider);
+    final notifier = ref.read(radioPlayerProvider.notifier);
+    final isCompact = MediaQuery.sizeOf(context).height < 700;
 
-class _RadioPlayerPageState extends State<RadioPlayerPage> {
-  late final RadioPlayerService _player;
-
-  @override
-  void initState() {
-    super.initState();
-    _player = RadioPlayerService();
-  }
-
-  @override
-  void dispose() {
-    _player.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _player,
-      builder: (context, _) => _RadioPlayerView(player: _player),
-    );
-  }
-}
-
-class _RadioPlayerView extends StatelessWidget {
-  const _RadioPlayerView({required this.player});
-
-  final RadioPlayerService player;
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFF0FFCC), Color(0xFFFFFFFF)],
-            stops: [0.0, 0.5],
-          ),
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: BibleFmCover(
-                        isActive: player.isPlaying && !player.isLoading,
+      backgroundColor: _screenBg,
+      body: SafeArea(
+        child: Container(
+          color: _screenBg,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: BibleFmCover(),
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: Container(
+                        width: constraints.maxWidth.clamp(280.0, 440.0),
+                        margin: const EdgeInsets.symmetric(horizontal: 20),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: isCompact ? 18 : 26,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.72),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: _uiAccent.withValues(alpha: 0.12),
+                            width: 1.2,
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x2200260F),
+                              blurRadius: 30,
+                              offset: Offset(0, 12),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _PlaybackStatusChip(
+                              isPlaying: state.isPlaying,
+                              isBuffering: state.isBuffering,
+                            ),
+                            SizedBox(height: isCompact ? 18 : 24),
+                            DurationLabel(elapsed: state.elapsed),
+                            const SizedBox(height: 8),
+                            Text(
+                              state.isBuffering
+                                  ? 'Conectando ao stream...'
+                                  : state.isPlaying
+                                      ? 'Transmitindo agora'
+                                      : 'Toque em play para ouvir',
+                              style: GoogleFonts.dmSans(
+                                color: _uiAccent.withValues(alpha: 0.76),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            SizedBox(height: isCompact ? 20 : 28),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                LiveIconButton(
+                                  isLiveMode: state.isLiveMode,
+                                  onLiveTap: notifier.goLive,
+                                ),
+                                const SizedBox(width: 18),
+                                PlayButton(
+                                  isPlaying: state.isPlaying,
+                                  isLoading: state.isBuffering,
+                                  onTap: notifier.togglePlayPause,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    LiveIconButton(
-                      isLiveMode: player.isLiveMode,
-                      onLiveTap: player.goLive,
+                  if (state.errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+                      child: Text(
+                        state.errorMessage!,
+                        style: GoogleFonts.dmSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.redAccent,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
-                    const SizedBox(width: 18),
-                    DurationLabel(elapsed: player.displayedElapsed),
-                  ],
-                ),
-                const SizedBox(height: 28),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: PlayButton(
-                    isPlaying: player.isPlaying,
-                    isLoading: player.isLoading,
-                    onTap: player.togglePlayPause,
-                  ),
-                ),
-                SizedBox(height: constraints.maxHeight > 760 ? 24 : 12),
-              ],
-            );
-          },
+                  SizedBox(height: constraints.maxHeight > 760 ? 24 : 12),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -102,191 +122,103 @@ class _RadioPlayerView extends StatelessWidget {
 }
 
 class BibleFmCover extends StatelessWidget {
-  const BibleFmCover({
-    super.key,
-    required this.isActive,
-  });
-
-  final bool isActive;
+  const BibleFmCover({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final titleFont = (size.width * 0.1).clamp(30.0, 42.0);
+    final iconSize = (size.width * 0.07).clamp(22.0, 30.0);
+
     return SizedBox(
       width: double.infinity,
-      height: 420,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
+      height: 90,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0FFCC),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: _uiAccent.withValues(alpha: 0.15)),
+        ),
+        child: Row(
+          children: [
+            Text(
+              'BIBLE FM',
+              style: GoogleFonts.russoOne(
+                color: _uiAccent,
+                fontSize: titleFont,
+                letterSpacing: 1.5,
+              ),
+            ),
+            const Spacer(),
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: _uiAccent.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.graphic_eq_rounded,
+                color: _uiAccent.withValues(alpha: 0.85),
+                size: iconSize,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PlaybackStatusChip extends StatelessWidget {
+  const _PlaybackStatusChip({
+    required this.isPlaying,
+    required this.isBuffering,
+  });
+
+  final bool isPlaying;
+  final bool isBuffering;
+
+  @override
+  Widget build(BuildContext context) {
+    final isLive = isPlaying && !isBuffering;
+    final color = isLive ? const Color(0xFF148A37) : _uiAccent.withValues(alpha: 0.72);
+    final label = isBuffering
+        ? 'Conectando'
+        : isLive
+            ? 'Ao vivo'
+            : 'Pausado';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
-            color: const Color(0xFFF0FFCC),
-            child: Row(
-              children: [
-                Text(
-                  'BIBLE FM',
-                  style: GoogleFonts.russoOne(
-                    color: _uiAccent,
-                    fontSize: 44,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                const Spacer(),
-                Icon(
-                  Icons.more_horiz_rounded,
-                  color: _uiAccent.withValues(alpha: 0.85),
-                  size: 34,
-                ),
-              ],
+          Icon(
+            isBuffering ? Icons.sync_rounded : Icons.fiber_manual_record_rounded,
+            size: 14,
+            color: color,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label.toUpperCase(),
+            style: GoogleFonts.dmSans(
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+              letterSpacing: 0.8,
+              color: color,
             ),
           ),
-          const SizedBox(height: 12),
-          _FallbackCover(isActive: isActive),
         ],
       ),
     );
-  }
-}
-
-class _FallbackCover extends StatelessWidget {
-  const _FallbackCover({required this.isActive});
-  static const Color _micColor = Color(0xFF00260F);
-  final bool isActive;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 300,
-        height: 300,
-        decoration: BoxDecoration(
-          color: const Color(0xFF003719),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: _micColor.withValues(alpha: 0.2),
-            width: 1.2,
-          ),
-        ),
-        child: _MindfulnessVisualizer(isActive: isActive),
-      ),
-    );
-  }
-}
-
-class _MindfulnessVisualizer extends StatefulWidget {
-  const _MindfulnessVisualizer({required this.isActive});
-
-  final bool isActive;
-
-  @override
-  State<_MindfulnessVisualizer> createState() => _MindfulnessVisualizerState();
-}
-
-class _MindfulnessVisualizerState extends State<_MindfulnessVisualizer>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 4200),
-    );
-    if (widget.isActive) {
-      _controller.repeat();
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant _MindfulnessVisualizer oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.isActive == widget.isActive) return;
-    if (widget.isActive) {
-      _controller.repeat();
-    } else {
-      _controller.animateTo(
-        0,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeOut,
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) {
-        return CustomPaint(
-          painter: _MindfulnessVisualizerPainter(
-            progress: _controller.value,
-            isActive: widget.isActive,
-          ),
-          child: const SizedBox.expand(),
-        );
-      },
-    );
-  }
-}
-
-class _MindfulnessVisualizerPainter extends CustomPainter {
-  const _MindfulnessVisualizerPainter({
-    required this.progress,
-    required this.isActive,
-  });
-
-  final double progress;
-  final bool isActive;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final t = isActive ? progress : 0.0;
-    final paint = Paint()
-      ..color = const Color(0xFFF0FFCC).withValues(alpha: 0.9)
-      ..style = PaintingStyle.fill;
-
-    // Visualizer de rádio em barras segmentadas.
-    const columns = 10;
-    const maxSegments = 14;
-    final usableWidth = size.width * 0.88;
-    final startX = (size.width - usableWidth) / 2;
-    final barWidth = usableWidth / (columns * 1.3);
-    final gapX = barWidth * 0.3;
-    final segmentHeight = 11.0;
-    final segmentGap = 4.0;
-    final baselineY = size.height * 0.93;
-
-    for (var i = 0; i < columns; i++) {
-      final phase = (i * 0.62) + (t * 2 * pi);
-      final normalized = (sin(phase) + 1) / 2;
-      final centerShape =
-          1 - ((i - (columns - 1) / 2).abs() / (columns / 2)) * 0.22;
-      final activeSegments = isActive
-          ? (4 + (normalized * (maxSegments - 4) * centerShape)).round()
-          : 3;
-
-      final x = startX + i * (barWidth + gapX);
-      for (var s = 0; s < activeSegments; s++) {
-        final y = baselineY - (s + 1) * segmentHeight - s * segmentGap;
-        final rect = RRect.fromRectAndRadius(
-          Rect.fromLTWH(x, y, barWidth, segmentHeight),
-          const Radius.circular(2.2),
-        );
-        canvas.drawRRect(rect, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _MindfulnessVisualizerPainter oldDelegate) {
-    return oldDelegate.progress != progress || oldDelegate.isActive != isActive;
   }
 }
 
@@ -309,77 +241,31 @@ class LiveIconButton extends StatelessWidget {
       onTap: onLiveTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: 64,
-        height: 64,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          shape: BoxShape.circle,
+          borderRadius: BorderRadius.circular(999),
           color: isLiveMode
               ? _uiAccent.withValues(alpha: 0.14)
-              : Colors.transparent,
+              : Colors.white.withValues(alpha: 0.72),
           border: Border.all(color: color, width: 1.4),
         ),
-        child: Center(child: _LiveWavesIcon(color: color, size: 30)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.wifi_tethering_rounded, color: color, size: 18),
+            const SizedBox(width: 6),
+            Text(
+              'LIVE',
+              style: GoogleFonts.dmSans(
+                color: color,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.8,
+              ),
+            ),
+          ],
+        ),
       ),
     );
-  }
-}
-
-class _LiveWavesIcon extends StatelessWidget {
-  const _LiveWavesIcon({required this.color, required this.size});
-
-  final Color color;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CustomPaint(painter: _LiveWavesPainter(color: color)),
-    );
-  }
-}
-
-class _LiveWavesPainter extends CustomPainter {
-  const _LiveWavesPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final stroke = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.2
-      ..strokeCap = StrokeCap.round;
-
-    final fill = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    // ponto central
-    canvas.drawCircle(center, 2.6, fill);
-
-    // ondas internas e externas
-    final innerRect = Rect.fromCircle(
-      center: center,
-      radius: size.width * 0.23,
-    );
-    final outerRect = Rect.fromCircle(
-      center: center,
-      radius: size.width * 0.36,
-    );
-
-    canvas.drawArc(innerRect, -2.3, 1.5, false, stroke);
-    canvas.drawArc(innerRect, 0.8, 1.5, false, stroke);
-    canvas.drawArc(outerRect, -2.3, 1.5, false, stroke);
-    canvas.drawArc(outerRect, 0.8, 1.5, false, stroke);
-  }
-
-  @override
-  bool shouldRepaint(covariant _LiveWavesPainter oldDelegate) {
-    return oldDelegate.color != color;
   }
 }
 
@@ -390,10 +276,13 @@ class DurationLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final fontSize = (width * 0.14).clamp(38.0, 56.0);
+
     return Text(
       _formatBadgeDuration(elapsed),
       style: GoogleFonts.russoOne(
-        fontSize: 56,
+        fontSize: fontSize,
         letterSpacing: 1,
         color: _uiAccent,
       ),
