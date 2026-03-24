@@ -35,10 +35,9 @@ class RadioPlayerUiState {
 
   bool get isPlaying => lifecycle == UiPlaybackLifecycle.playing;
 
-  /// Direct: em pausa (com ou sem modo live), para sincronizar o contador ou entrar no direct.
-  bool get canTapLive =>
-      lifecycle == UiPlaybackLifecycle.paused &&
-      !isBufferingUiLifecycle(lifecycle);
+  /// Direct: disponível fora de buffering quando ainda não está em live
+  /// (ex.: differe em reprodução ou pausa).
+  bool get canTapLive => !isLiveMode && !isBufferingUiLifecycle(lifecycle);
 
   /// «En direct»: a tocar, sem buffer, com modo live.
   bool get isEnDirect =>

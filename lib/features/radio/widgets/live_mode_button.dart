@@ -34,10 +34,18 @@ class LiveModeButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final iconColor = isDark ? scheme.onSurface : const Color(0xFF141414);
-    // Fora do modo live, pílula sem preenchimento (somente contorno).
-    final fillColor = !isLiveMode
-        ? Colors.transparent
-        : (isDark ? scheme.surfaceContainerHighest : Colors.white);
+    final baseFillColor =
+        isDark ? scheme.surfaceContainerHighest : Colors.white;
+    final differFillColor = Colors.white.withValues(alpha: 0.7);
+    // Estados visuais:
+    // - live: preenchimento total
+    // - differe (tocando fora do live): 50% opaco
+    // - pausa fora do live: sem preenchimento
+    final fillColor = isLiveMode
+        ? baseFillColor
+        : (isPaused
+            ? Colors.transparent
+            : differFillColor);
     final borderColor = isDark
         ? scheme.outline.withValues(alpha: 0.55)
         : Colors.black.withValues(alpha: 0.18);
@@ -76,19 +84,24 @@ class LiveModeButton extends StatelessWidget {
     );
     final pillHeight = size;
 
+    final liveShadow = BoxShadow(
+      color: scheme.shadow.withValues(alpha: isDark ? 0.38 : 0.1),
+      blurRadius: AppSpacing.g(2, scale),
+      offset: Offset(0, AppSpacing.g(1, scale)),
+    );
+    final differShadow = BoxShadow(
+      color: scheme.shadow.withValues(alpha: isDark ? 0.24 : 0.07),
+      blurRadius: AppSpacing.g(2, scale) * 0.75,
+      offset: Offset(0, AppSpacing.gHalf(scale)),
+    );
+
     final decoration = BoxDecoration(
       color: fillColor,
       borderRadius: BorderRadius.circular(radius),
       border: Border.all(color: borderColor, width: 1),
-      boxShadow: !isLiveMode
-          ? const []
-          : [
-              BoxShadow(
-                color: scheme.shadow.withValues(alpha: isDark ? 0.38 : 0.1),
-                blurRadius: AppSpacing.g(2, scale),
-                offset: Offset(0, AppSpacing.g(1, scale)),
-              ),
-            ],
+      boxShadow: isLiveMode
+          ? [liveShadow]
+          : (isPaused ? const [] : [differShadow]),
     );
 
     final child = BroadcastSignalIcon(color: iconColor, size: iconSize);
