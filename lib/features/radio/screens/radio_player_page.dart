@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -90,7 +91,12 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                     AppSpacing.marginPanelInnerHorizontalSteps(narrow: isNarrow),
                     scale,
                   );
-                  final panelWidth = AppLayoutBreakpoints.maxPanelWidth(w, h, scale);
+                  final panelWidth =
+                      AppLayoutBreakpoints.maxPanelWidth(w, h, scale);
+                  final isPhonePortrait = !AppLayoutBreakpoints.isTablet(w) &&
+                      !AppLayoutBreakpoints.isLandscape(w, h);
+                  final cardWidthFraction =
+                      isPhonePortrait ? 0.96 : 1.0;
 
                   final playButtonSize = AppSpacing.g(
                     AppSpacing.playControlDiameterSteps(
@@ -196,6 +202,8 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                                                         innerConstraints
                                                             .maxWidth,
                                                     panelCap: panelWidth,
+                                                    contentWidthFraction:
+                                                        cardWidthFraction,
                                                   ),
                                                   panelPaddingH: panelPaddingH,
                                                   cardColor: cardColor,
@@ -350,6 +358,8 @@ class _DigitalTimer extends StatelessWidget {
     required this.timerTrayColor,
     required this.timerColor,
     required this.onTap,
+    required this.timerLayoutWidth,
+    required this.narrowMobile,
   });
 
   final Duration elapsed;
@@ -358,11 +368,17 @@ class _DigitalTimer extends StatelessWidget {
   final Color timerColor;
   final VoidCallback onTap;
 
+  /// Largura de referência (cartão / faixa do contador), mobile-first.
+  final double timerLayoutWidth;
+  final bool narrowMobile;
+
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final mainFontSize =
-        AppSpacing.responsiveTimerValueFontSize(width, scale);
+    final mainFontSize = AppSpacing.responsiveTimerValueFontSize(
+      timerLayoutWidth,
+      scale,
+      narrow: narrowMobile,
+    );
     final d = elapsed.isNegative ? Duration.zero : elapsed;
     final hh = d.inHours.toString().padLeft(2, '0');
     final mm = d.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -371,10 +387,8 @@ class _DigitalTimer extends StatelessWidget {
 
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final timerVerticalSteps =
-        AppLayoutBreakpoints.isNarrow(MediaQuery.sizeOf(context).width)
-            ? 2
-            : 3;
+    final timerVerticalSteps = narrowMobile ? 2 : 3;
+    final timerHorizontalSteps = narrowMobile ? 2 : 3;
 
     final digitStyle = GoogleFonts.jetBrainsMono(
       fontSize: mainFontSize,
@@ -430,7 +444,7 @@ class _DigitalTimer extends StatelessWidget {
               child: Padding(
                 padding: AppSpacing.insetSymmetric(
                   layoutScale: scale,
-                  horizontal: 3,
+                  horizontal: timerHorizontalSteps,
                   vertical: timerVerticalSteps,
                 ),
                 child: Column(
@@ -526,15 +540,17 @@ class _MainPlayerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final statusToTimerGap = AppSpacing.g(
-      AppSpacing.marginPanelInnerHorizontalSteps(narrow: narrowMobile),
+      narrowMobile ? 2 : 3,
       scale,
     );
+    final timerBodyWidth =
+        math.max(0.0, width - 2 * panelPaddingH);
     const cornerPt = AppLayoutBreakpoints.playerCardCornerPt;
     return Container(
       width: width,
       padding: EdgeInsets.symmetric(
         horizontal: panelPaddingH,
-        vertical: AppSpacing.g(isCompactHeight ? 3 : 4, scale),
+        vertical: AppSpacing.g(isCompactHeight ? 2 : 3, scale),
       ),
       decoration: BoxDecoration(
         color: cardColor,
@@ -588,6 +604,8 @@ class _MainPlayerCard extends StatelessWidget {
             timerTrayColor: timerTrayColor,
             timerColor: timerColor,
             onTap: onTimerTap,
+            timerLayoutWidth: timerBodyWidth,
+            narrowMobile: narrowMobile,
           ),
         ],
       ),
@@ -710,31 +728,40 @@ class _PlaybackStatusChip extends StatelessWidget {
         ? (isLiveMode ? 'En direct' : 'Différé')
         : 'En pause';
 
-    return Container(
-      padding: AppSpacing.insetSymmetric(
-        layoutScale: scale,
-        horizontal: narrowMobile ? 2 : 3,
-        vertical: narrowMobile ? 1 : 1,
-      ),
-      decoration: BoxDecoration(
-        color: chipGrey,
-        borderRadius: AppRadii.borderRadius(AppRadii.pill, scale),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label.toUpperCase(),
-            style: GoogleFonts.dmSans(
-              fontWeight: FontWeight.w800,
-              fontSize: AppTypeScale.label * scale,
-              letterSpacing: AppSpacing.gHalf(scale) * 0.22,
-              color: isDark
-                  ? labelColor.withValues(alpha: 0.92)
-                  : labelColor,
+    final minH = math.max(
+      AppSpacing.minTouchTarget,
+      AppSpacing.g(6, scale),
+    );
+    return ConstrainedBox(
+      constraints: BoxConstraints(minHeight: minH),
+      child: Container(
+        alignment: Alignment.center,
+        padding: AppSpacing.insetSymmetric(
+          layoutScale: scale,
+          horizontal: narrowMobile ? 2 : 3,
+          vertical: 1,
+        ),
+        decoration: BoxDecoration(
+          color: chipGrey,
+          borderRadius: AppRadii.borderRadius(AppRadii.pill, scale),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              label.toUpperCase(),
+              style: GoogleFonts.dmSans(
+                fontWeight: FontWeight.w800,
+                fontSize: AppTypeScale.label * scale,
+                letterSpacing: AppSpacing.gHalf(scale) * 0.22,
+                color: isDark
+                    ? labelColor.withValues(alpha: 0.92)
+                    : labelColor,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

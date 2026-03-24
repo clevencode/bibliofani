@@ -126,13 +126,16 @@ abstract final class AppSpacing {
     );
   }
 
-  /// Largura do cartão dentro da área já com margens: nunca excede a largura útil.
+  /// Largura do cartão na área com margens; fração menor que 1 dá respiro
+  /// óptico em retrato telefone (mobile-first).
   static double clampCardContentWidth({
     required double contentWidth,
     required double panelCap,
+    double contentWidthFraction = 1.0,
   }) {
     if (contentWidth <= 0) return 0;
-    return math.min(contentWidth, panelCap);
+    final eff = contentWidth * contentWidthFraction.clamp(0.86, 1.0);
+    return math.min(eff, panelCap);
   }
 
   static const int playControlDiameterMinSteps = 9;
@@ -149,11 +152,17 @@ abstract final class AppSpacing {
     return raw.clamp(g(3, layoutScale), g(4, layoutScale));
   }
 
-  /// Contador digital: mesma lógica — evita tipos enormes só porque o ecrã é largo.
-  static double responsiveTimerValueFontSize(double width, double layoutScale) {
-    final baseW = math.min(width, 430);
-    final raw = baseW * 0.118 * layoutScale;
-    return raw.clamp(g(3, layoutScale), g(6, layoutScale));
+  /// Contador digital: escala com a **largura do cartão** (não a do ecrã inteiro).
+  /// Em ecrã estreito limita o máximo a 5 passos para menos "zona morta".
+  static double responsiveTimerValueFontSize(
+    double width,
+    double layoutScale, {
+    bool narrow = false,
+  }) {
+    final baseW = math.min(width, 400);
+    final raw = baseW * 0.112 * layoutScale;
+    final maxStep = narrow ? 5 : 6;
+    return raw.clamp(g(3, layoutScale), g(maxStep, layoutScale));
   }
 }
 
@@ -190,8 +199,8 @@ abstract final class AppLayoutBreakpoints {
     );
   }
 
-  /// Cantos do cartão do player (pt lógicos antes de × [layoutScale]).
-  static const double playerCardCornerPt = 10;
+  /// Cantos do cartão principal — alinhado a contentores M3 (~16 pt lógicos).
+  static const double playerCardCornerPt = 16;
 }
 
 /// Raios de canto alinhados à grelha 8pt.
