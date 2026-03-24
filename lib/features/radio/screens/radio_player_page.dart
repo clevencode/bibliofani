@@ -11,13 +11,14 @@ import 'package:meu_app/features/radio/providers/radio_player_ui_provider.dart';
 import 'package:meu_app/features/radio/screens/player_ui_models.dart';
 import 'package:meu_app/features/radio/widgets/live_pulsing_indicator.dart';
 import 'package:meu_app/features/radio/widgets/radio_transport_controls.dart';
+import 'package:meu_app/features/radio/widgets/voice_bars_visualizer.dart';
 
 /// Bible FM: layout **mobile-first** — base para telemóvel, depois tablet/paisagem.
 /// Estrutura alinhada às orientações de **margens, contenção e encartes** do
 /// Android ([content structure](https://developer.android.com/design/ui/mobile/guides/layout-and-content/content-structure?hl=pt-br)):
 /// grelha 8 pt, ~16 dp lateral em compacto, cartão como contenção explícita,
 /// área segura e corpo rolável quando o conteúdo excede a altura.
-/// Estado de leitura / contador / live: [radioPlayerUiProvider].
+/// Estado de leitura / indicador de áudio / live: [radioPlayerUiProvider].
 ///
 /// [ConsumerStatefulWidget] para [ref] no arranque automático e no `build`.
 class RadioPlayerPage extends ConsumerStatefulWidget {
@@ -31,7 +32,13 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
   @override
   void initState() {
     super.initState();
+    _schedulePlaybackAfterFirstFrame();
+  }
+
+  /// Espera um frame renderizado para não competir com o layout/tema no arranque.
+  void _schedulePlaybackAfterFirstFrame() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       unawaited(
         ref.read(radioPlayerUiProvider.notifier).autoStartLivePlayback(),
       );
@@ -222,9 +229,6 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                                                       timerTrayColor,
                                                   titleColor: titleColor,
                                                   timerColor: timerColor,
-                                                  elapsed: ui.elapsed,
-                                                  onTimerTap:
-                                                      player.resetElapsed,
                                                 ),
                                                 if (ui.errorMessage !=
                                                     null) ...[
@@ -338,141 +342,6 @@ class _BibleFmHeader extends StatelessWidget {
   }
 }
 
-class _DigitalTimer extends StatelessWidget {
-  const _DigitalTimer({
-    required this.elapsed,
-    required this.scale,
-    required this.timerTrayColor,
-    required this.timerColor,
-    required this.onTap,
-    required this.timerLayoutWidth,
-    required this.narrowMobile,
-  });
-
-  final Duration elapsed;
-  final double scale;
-  final Color timerTrayColor;
-  final Color timerColor;
-  final VoidCallback onTap;
-
-  /// Largura de referência (cartão / faixa do contador), mobile-first.
-  final double timerLayoutWidth;
-  final bool narrowMobile;
-
-  @override
-  Widget build(BuildContext context) {
-    final mainFontSize = AppSpacing.responsiveTimerValueFontSize(
-      timerLayoutWidth,
-      scale,
-      narrow: narrowMobile,
-    );
-    final d = elapsed.isNegative ? Duration.zero : elapsed;
-    final hh = d.inHours.toString().padLeft(2, '0');
-    final mm = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final ss = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    final a11y = _sessionDurationSemanticsFr(d);
-
-    final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final timerVerticalSteps = narrowMobile ? 2 : 3;
-    final timerHorizontalSteps = narrowMobile ? 2 : 3;
-
-    final digitStyle = GoogleFonts.jetBrainsMono(
-      fontSize: mainFontSize,
-      fontWeight: FontWeight.w500,
-      letterSpacing: 0.6,
-      height: 1.05,
-      color: timerColor,
-      fontFeatures: const [FontFeature.tabularFigures()],
-    );
-    final sepStyle = digitStyle.copyWith(
-      fontSize: mainFontSize * 0.82,
-      fontWeight: FontWeight.w400,
-      letterSpacing: 0,
-      color: scheme.onSurfaceVariant,
-    );
-
-    final radius = AppRadii.borderRadius(AppTheme.notionBlockRadius, scale);
-
-    return Semantics(
-      button: true,
-      label:
-          'Temps d\'écoute, $a11y. Toucher pour remettre le compteur à zéro.',
-      child: Tooltip(
-        message: 'Réinitialiser le compteur',
-        waitDuration: const Duration(milliseconds: 400),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: radius,
-            hoverColor: isDark
-                ? AppTheme.darkHoverOverlay(scheme)
-                : Colors.black.withValues(alpha: 0.06),
-            splashColor: isDark
-                ? AppTheme.darkHoverOverlay(scheme)
-                : Colors.black.withValues(alpha: 0.08),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: timerTrayColor,
-                borderRadius: radius,
-                border: Border.all(
-                  color: scheme.outline.withValues(alpha: isDark ? 0.38 : 0.52),
-                  width: 1,
-                ),
-              ),
-              child: Padding(
-                padding: AppSpacing.insetSymmetric(
-                  layoutScale: scale,
-                  horizontal: timerHorizontalSteps,
-                  vertical: timerVerticalSteps,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text.rich(
-                      TextSpan(
-                        style: digitStyle,
-                        children: [
-                          TextSpan(text: hh),
-                          TextSpan(text: ':', style: sepStyle),
-                          TextSpan(text: mm),
-                          TextSpan(text: ':', style: sepStyle),
-                          TextSpan(text: ss),
-                        ],
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-String _sessionDurationSemanticsFr(Duration d) {
-  if (d.isNegative) d = Duration.zero;
-  final h = d.inHours;
-  final m = d.inMinutes.remainder(60);
-  final s = d.inSeconds.remainder(60);
-  final parts = <String>[];
-  if (h > 0) {
-    parts.add(h == 1 ? '1 heure' : '$h heures');
-  }
-  if (m > 0) {
-    parts.add(m == 1 ? '1 minute' : '$m minutes');
-  }
-  if (s > 0 || parts.isEmpty) {
-    parts.add(s == 1 ? '1 seconde' : '$s secondes');
-  }
-  return parts.join(', ');
-}
-
 class _MainPlayerCard extends StatelessWidget {
   const _MainPlayerCard({
     required this.width,
@@ -491,8 +360,6 @@ class _MainPlayerCard extends StatelessWidget {
     required this.timerTrayColor,
     required this.titleColor,
     required this.timerColor,
-    required this.elapsed,
-    required this.onTimerTap,
   });
 
   final double width;
@@ -511,8 +378,6 @@ class _MainPlayerCard extends StatelessWidget {
   final Color timerTrayColor;
   final Color titleColor;
   final Color timerColor;
-  final Duration elapsed;
-  final VoidCallback onTimerTap;
 
   @override
   Widget build(BuildContext context) {
@@ -564,13 +429,12 @@ class _MainPlayerCard extends StatelessWidget {
             ),
           ),
           SizedBox(height: statusToTimerGap),
-          _DigitalTimer(
-            elapsed: elapsed,
+          VoiceBarsVisualizer(
+            isActive: isPlaying && !isBuffering,
             scale: scale,
-            timerTrayColor: timerTrayColor,
-            timerColor: timerColor,
-            onTap: onTimerTap,
-            timerLayoutWidth: timerBodyWidth,
+            barColor: timerColor,
+            trayColor: timerTrayColor,
+            layoutWidth: timerBodyWidth,
             narrowMobile: narrowMobile,
           ),
         ],
