@@ -59,6 +59,16 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
     await ref.read(radioPlayerUiProvider.notifier).autoStartLivePlayback();
   }
 
+  /// Refresh: offline reinicia o processo; online só repõe o leitor e religa o fluxo.
+  Future<void> _onRefreshPressed() async {
+    if (!mounted) return;
+    if (ref.read(networkOfflineProvider)) {
+      await restartApplication();
+      return;
+    }
+    await ref.read(radioPlayerUiProvider.notifier).recoverPlaybackSoft();
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen<RadioNetworkLink>(networkLinkProvider, (previous, next) {
@@ -229,7 +239,8 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                                 child: _ErrorBanner(
                                   message: ui.errorMessage!,
                                   scale: scale,
-                                  onRetry: player.retryAfterError,
+                                  onRetry: () =>
+                                      unawaited(player.retryErrorBanner()),
                                 ),
                               ),
                             Expanded(
@@ -284,6 +295,7 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                                                   scale: scale,
                                                   isCompactHeight: isCompact,
                                                   narrowMobile: isNarrow,
+                                                  isOffline: isOffline,
                                                   isPlaying: ui.isPlaying,
                                                   isBuffering:
                                                       isTransportLoadingUiLifecycle(
@@ -314,8 +326,9 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                                                   _ErrorBanner(
                                                     message: ui.errorMessage!,
                                                     scale: scale,
-                                                    onRetry:
-                                                        player.retryAfterError,
+                                                    onRetry: () => unawaited(
+                                                      player.retryErrorBanner(),
+                                                    ),
                                                   ),
                                                 ],
                                               ],
@@ -361,13 +374,11 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                                 ? null
                                 : (ui.canTapLive ? player.liveTap : null),
                             onOfflineRestartApp:
-                                !ui.isPlaying &&
-                                        !isTransportLoadingUiLifecycle(
-                                          ui.lifecycle,
-                                        ) &&
+                                !isTransportLoadingUiLifecycle(ui.lifecycle) &&
                                         (isOffline || ui.errorMessage != null)
-                                    ? () => unawaited(restartApplication())
+                                    ? () => unawaited(_onRefreshPressed())
                                     : null,
+                            refreshRestartsEntireApp: isOffline,
                           ),
                         ),
                       ),
@@ -514,6 +525,7 @@ class _MainPlayerCard extends StatelessWidget {
     required this.scale,
     required this.isCompactHeight,
     required this.narrowMobile,
+    required this.isOffline,
     required this.isPlaying,
     required this.isBuffering,
     required this.isLiveMode,
@@ -532,6 +544,7 @@ class _MainPlayerCard extends StatelessWidget {
   final double scale;
   final bool isCompactHeight;
   final bool narrowMobile;
+  final bool isOffline;
   final bool isPlaying;
   final bool isBuffering;
   final bool isLiveMode;
@@ -573,6 +586,7 @@ class _MainPlayerCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 _PlaybackStatusChip(
+                  isOffline: isOffline,
                   isPlaying: isPlaying,
                   isBuffering: isBuffering,
                   isLiveMode: isLiveMode,
@@ -775,6 +789,7 @@ class _ErrorBanner extends StatelessWidget {
 
 class _PlaybackStatusChip extends StatelessWidget {
   const _PlaybackStatusChip({
+    required this.isOffline,
     required this.isPlaying,
     required this.isBuffering,
     required this.isLiveMode,
@@ -784,6 +799,7 @@ class _PlaybackStatusChip extends StatelessWidget {
     required this.isDark,
   });
 
+  final bool isOffline;
   final bool isPlaying;
   final bool isBuffering;
   final bool isLiveMode;
@@ -797,9 +813,14 @@ class _PlaybackStatusChip extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final brightness = Theme.of(context).brightness;
     final isListening = isPlaying && !isBuffering;
-    final label = isListening
-        ? (isLiveMode ? 'En direct' : 'En écoute')
-        : 'En pause';
+    final String label;
+    if (isOffline && !isBuffering) {
+      label = 'Hors ligne';
+    } else if (isListening) {
+      label = isLiveMode ? 'En direct' : 'En écoute';
+    } else {
+      label = 'En pause';
+    }
 
     final pillBg = AppTheme.statusPillBackground(
       scheme: scheme,

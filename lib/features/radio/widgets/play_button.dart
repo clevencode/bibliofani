@@ -14,6 +14,7 @@ class PlayButton extends StatefulWidget {
     this.enabled = true,
     this.isOffline = false,
     this.onOfflineRestartApp,
+    this.refreshRestartsEntireApp = true,
     this.layoutScale,
   });
 
@@ -34,6 +35,9 @@ class PlayButton extends StatefulWidget {
   /// Quando não-null e sem reprodução/carregamento: ícone [Icons.refresh_rounded] e reinício da app (pai decide: offline, erro, etc.).
   final VoidCallback? onOfflineRestartApp;
 
+  /// Quando false (ex.: online com erro), o refresh só tenta religar o fluxo, não reinicia o processo.
+  final bool refreshRestartsEntireApp;
+
   /// Escala mobile-first para sombra (8pt); opcional.
   final double? layoutScale;
 
@@ -47,10 +51,9 @@ class _PlayButtonState extends State<PlayButton> {
     final brightness = Theme.of(context).brightness;
     final isDark = brightness == Brightness.dark;
     final ls = widget.layoutScale ?? 1.0;
-    final restartMode = !widget.isPlaying &&
-        !widget.isLoading &&
-        widget.onOfflineRestartApp != null;
-    // Reinício: só quando o pai passa callback (offline e/ou erro de fluxo).
+    // Offline/erro: refresh em vez de play (pai só passa callback fora de load).
+    final restartMode =
+        !widget.isLoading && widget.onOfflineRestartApp != null;
     final IconData iconData = restartMode
         ? Icons.refresh_rounded
         : (widget.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded);
@@ -77,10 +80,16 @@ class _PlayButtonState extends State<PlayButton> {
     final String a11yLabel;
     final String tooltipMsg;
     if (restartMode) {
-      a11yLabel = 'Reiniciar a aplicação';
-      tooltipMsg = widget.isOffline
-          ? 'Reiniciar a app (sem rede)'
-          : 'Reiniciar a app (erro no fluxo)';
+      if (widget.refreshRestartsEntireApp) {
+        a11yLabel = 'Reiniciar a aplicação';
+        tooltipMsg = widget.isOffline
+            ? 'Sem ligação — reiniciar a app ou restabeleça a rede'
+            : 'Erro no fluxo — reiniciar a app ou tente novamente';
+      } else {
+        a11yLabel = 'Tentar religar o fluxo';
+        tooltipMsg =
+            'Erro ou interrupção — toque para voltar a ligar à rádio';
+      }
     } else if (widget.isOffline && !widget.isPlaying && !widget.isLoading) {
       a11yLabel = 'Lecture indisponible sans connexion réseau';
       tooltipMsg = 'Sem ligação à Internet';

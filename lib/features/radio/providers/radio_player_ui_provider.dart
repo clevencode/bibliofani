@@ -85,8 +85,8 @@ class RadioPlayerUiState {
 final radioPlayerUiProvider =
     StateNotifierProvider<RadioPlayerUiNotifier, RadioPlayerUiState>((ref) {
   final notifier = RadioPlayerUiNotifier(ref);
-  // Perda de interface (ex.: Wi‑Fi desliga e não há outra — [offline]): pausa ou para o load.
-  // Wi‑Fi → dados móveis não passa por [offline], a leitura continua.
+  // Perda de interface (ex.: Wi‑Fi desliga e não há outra — [offline]): modo refresh + tentativa
+  // automática ao voltar online. Wi‑Fi → dados móveis não passa por [offline], a leitura continua.
   ref.listen<RadioNetworkLink>(networkLinkProvider, (previous, next) {
     if (previous == null) return;
     if (next != RadioNetworkLink.offline) return;
@@ -103,8 +103,8 @@ final radioPlayerUiProvider =
 ///   não activa «en direct».
 /// - [liveTap] — só o botão **live**: modo direct, contador de *catch-up* e nova
 ///   ligação ao fluxo (borda ao vivo).
-/// - [retryAfterError], [pauseDueToNetworkLoss], [onConnectivityRestored] —
-///   reacções de sistema / rede, não são botões de transporte.
+/// - [retryAfterError], [retryErrorBanner], [recoverPlaybackSoft], [pauseDueToNetworkLoss],
+///   [onConnectivityRestored] — reacções de sistema / rede, não são botões de transporte.
 /// - Interrupções de áudio ([AudioSession.interruptionEventStream]): chamada,
 ///   alarme, etc. — pausa alinhada à UI; retoma só se esta camada pausou ([_pausedForAudioInterruption]).
 ///
@@ -139,6 +139,10 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
     );
   }
 
+  /// Mensagem quando [pauseDueToNetworkLoss] actua (banner + ícone refresh na UI).
+  static const String _kConnectivityLostMessage =
+      'Sem ligação à Internet. Nova tentativa automática quando a rede voltar.';
+
   /// Passo de «rattrapage» vers le direct (UI). Plusieurs taps après pause
   /// rapprochent le compteur du bord live sans le ramener à zéro d’un coup.
   static const Duration _liveCatchUpChunk = Duration(seconds: 30);
@@ -160,6 +164,9 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
   bool _deferPlayerIdle = false;
   /// Evita toques repetidos em «live» durante uma nova ligação ao fluxo.
   bool _liveReloadInFlight = false;
+
+  /// Perda de rede durante reprodução ou carregamento: ao voltar online, retoma sozinha.
+  bool _shouldAutoResumeWhenOnline = false;
 
   /// Avança o contador em direcção ao instante mais recente, em [chunk]s,
   /// sem [Duration.zero] imposto por um único toque.
@@ -423,45 +430,123 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
     return raw;
   }
 
-  /// Chamado quando a interface de rede volta (ex.: Wi‑Fi/dados). Limpa erro
-  /// «pendente» em idle para o utilizador voltar a iniciar sem passo extra.
+  /// Chamado quando a interface de rede volta (ex.: Wi‑Fi/dados).
+  /// Se havia reprodução ou carregamento quando a rede caiu, tenta retomar sozinha;
+  /// caso contrário limpa o erro em [idle] / [paused] para o utilizador poder dar play.
   void onConnectivityRestored() {
-    if (state.lifecycle != UiPlaybackLifecycle.idle) return;
-    if (state.errorMessage == null) return;
-    _emit(state.copyWith(errorMessage: null));
+    if (_isOffline) return;
+    final wantAutoResume = _shouldAutoResumeWhenOnline;
+    _shouldAutoResumeWhenOnline = false;
+
+    if (wantAutoResume) {
+      unawaited(_resumePlaybackAfterConnectivityRestored());
+      return;
+    }
+
+    if (state.errorMessage != null &&
+        (state.lifecycle == UiPlaybackLifecycle.idle ||
+            state.lifecycle == UiPlaybackLifecycle.paused)) {
+      _emit(state.copyWith(errorMessage: null));
+    }
   }
 
   /// Transição **online → offline** (ex.: Wi‑Fi cai e não há fallback de dados).
   /// Não reutiliza [transportTap] (evita misturar com dismiss de erro).
   ///
-  /// - **A tocar:** [pause] e em seguida alinha [lifecycle] ao [AudioPlayer]
-  ///   (normalmente [paused]; se o fluxo já tiver morrido, [idle]) — evita o contador
-  ///   e o chip «a tocar» a ficarem activos até ao próximo evento do stream.
-  /// - **Load activo:** [_cancelActiveTransportLoad].
-  /// - **[idle] / [paused]:** sem efeito.
+  /// - **A tocar:** [stop] (modo refresh, não chip «pausa»), [idle] + mensagem;
+  ///   marca retoma automática ao voltar online.
+  /// - **Load activo:** [_cancelActiveTransportLoad] + mensagem; retoma automática.
+  /// - **[idle] / [paused]:** só mensagem se ainda não houver erro (sem retoma automática:
+  ///   utilizador parou ou nunca deu play).
   Future<void> pauseDueToNetworkLoss() async {
     _pausedForAudioInterruption = false;
     switch (state.lifecycle) {
       case UiPlaybackLifecycle.idle:
       case UiPlaybackLifecycle.paused:
+        if (state.errorMessage == null) {
+          _emit(state.copyWith(errorMessage: _kConnectivityLostMessage));
+        }
         return;
       case UiPlaybackLifecycle.preparing:
       case UiPlaybackLifecycle.buffering:
+        _shouldAutoResumeWhenOnline = true;
         await _cancelActiveTransportLoad();
+        _emit(state.copyWith(errorMessage: _kConnectivityLostMessage));
         return;
       case UiPlaybackLifecycle.playing:
+        _shouldAutoResumeWhenOnline = true;
         try {
-          await _player.pause();
+          await _player.stop();
         } catch (e, stack) {
-          if (kDebugMode) debugPrint('pauseDueToNetworkLoss pause: $e\n$stack');
+          if (kDebugMode) {
+            debugPrint('pauseDueToNetworkLoss stop: $e\n$stack');
+          }
         }
+        _sourceLoaded = false;
+        _deferPlayerIdle = false;
         _emit(
           _ecouteLivePresentation(state).copyWith(
-            lifecycle: _uiLifecycleFromPlayer(_player.playerState),
+            lifecycle: UiPlaybackLifecycle.idle,
+            errorMessage: _kConnectivityLostMessage,
           ),
         );
         return;
     }
+  }
+
+  /// Após [onConnectivityRestored] quando havia leitura ou buffer activo antes do offline.
+  Future<void> _resumePlaybackAfterConnectivityRestored() async {
+    if (_isOffline) return;
+    await _retryAfterErrorAsync();
+    if (_isOffline) return;
+    if (state.lifecycle != UiPlaybackLifecycle.idle) return;
+    try {
+      await transportTap();
+    } catch (e, stack) {
+      if (kDebugMode) {
+        debugPrint('_resumePlaybackAfterConnectivityRestored: $e\n$stack');
+      }
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: e,
+          stack: stack,
+          library: 'radio_player_ui_provider',
+          context: ErrorDescription('_resumePlaybackAfterConnectivityRestored'),
+        ),
+      );
+    }
+  }
+
+  /// Botão refresh (online): repõe estado e volta a ligar o fluxo sem reiniciar o processo.
+  Future<void> recoverPlaybackSoft() async {
+    if (_isOffline) return;
+    await _retryAfterErrorAsync();
+    if (_isOffline) return;
+    if (state.lifecycle != UiPlaybackLifecycle.idle) return;
+    try {
+      await transportTap();
+    } catch (e, stack) {
+      if (kDebugMode) {
+        debugPrint('recoverPlaybackSoft: $e\n$stack');
+      }
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: e,
+          stack: stack,
+          library: 'radio_player_ui_provider',
+          context: ErrorDescription('recoverPlaybackSoft'),
+        ),
+      );
+    }
+  }
+
+  /// Banner «RÉESSAYER»: offline só repõe estado; online repõe e tenta play.
+  Future<void> retryErrorBanner() async {
+    if (_isOffline) {
+      await _retryAfterErrorAsync();
+      return;
+    }
+    await recoverPlaybackSoft();
   }
 
   /// Arranque da app: inicia a reprodução em **écoute** (sem «en direct» até tocar em live).
@@ -615,6 +700,7 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
   }
 
   Future<void> _retryAfterErrorAsync() async {
+    _shouldAutoResumeWhenOnline = false;
     try {
       await _player.stop();
     } catch (_) {}

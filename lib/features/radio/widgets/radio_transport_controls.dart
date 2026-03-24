@@ -20,6 +20,7 @@ class RadioTransportControls extends StatelessWidget {
     required this.onTransportTap,
     required this.onLiveTap,
     this.onOfflineRestartApp,
+    this.refreshRestartsEntireApp = true,
   });
 
   final double scale;
@@ -44,17 +45,23 @@ class RadioTransportControls extends StatelessWidget {
   /// Sem leitura activa: reiniciar a app (ícone atualizar); o pai define quando (offline, erro, …).
   final VoidCallback? onOfflineRestartApp;
 
+  /// Se false, o ícone refresh representa religar o fluxo (online), não [Restart] do processo.
+  final bool refreshRestartsEntireApp;
+
   @override
   Widget build(BuildContext context) {
+    // Refresh visível offline/erro mesmo durante breve «playing» até o notifier sincronizar.
     final showRestartTransport =
-        onOfflineRestartApp != null && !isPlaying && !isBuffering;
+        onOfflineRestartApp != null && !isBuffering;
     final playEnabled =
         !isOffline || isPlaying || isBuffering || showRestartTransport;
 
     return Semantics(
       container: true,
       label: isOffline || showRestartTransport
-          ? 'Contrôles : pause, annuler le chargement, ou reiniciar a app si besoin'
+          ? (refreshRestartsEntireApp
+                ? 'Contrôles : pause, annuler le chargement, ou reiniciar a app si besoin'
+                : 'Contrôles : pause, annuler le chargement, ou reconectar ao fluxo')
           : 'Ordre : lecture ou pause, puis direct à droite une fois le flux prêt',
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -70,6 +77,7 @@ class RadioTransportControls extends StatelessWidget {
             enabled: playEnabled,
             isOffline: isOffline,
             onOfflineRestartApp: onOfflineRestartApp,
+            refreshRestartsEntireApp: refreshRestartsEntireApp,
           ),
           LiveModeButton(
             playbackLifecycle: playbackLifecycle,
