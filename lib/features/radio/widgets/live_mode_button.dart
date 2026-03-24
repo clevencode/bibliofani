@@ -36,10 +36,14 @@ class LiveModeButton extends StatelessWidget {
     final iconColor = isDark ? scheme.onSurface : const Color(0xFF141414);
     final baseFillColor =
         isDark ? scheme.surfaceContainerHighest : Colors.white;
-    final differFillColor = Colors.white.withValues(alpha: 0.7);
+    final differFillColor = Color.lerp(
+      Colors.transparent,
+      baseFillColor,
+      0.7,
+    )!;
     // Estados visuais:
-    // - live: preenchimento total
-    // - differe (tocando fora do live): 50% opaco
+    // - live: preenchimento base (100%)
+    // - differe (tocando fora do live): mesmo preenchimento com brilho reduzido
     // - pausa fora do live: sem preenchimento
     final fillColor = isLiveMode
         ? baseFillColor
