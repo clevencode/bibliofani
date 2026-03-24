@@ -1,44 +1,49 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:meu_app/core/theme/app_spacing.dart';
+import 'package:meu_app/core/theme/app_theme.dart';
 import 'package:meu_app/core/theme/app_theme_mode_toggle.dart';
-import 'package:meu_app/features/radio/services/radio_bridge_providers.dart';
-import 'package:meu_app/features/radio/services/radio_player_controller.dart';
-import 'package:meu_app/features/radio/utils/radio_ui_invocation.dart';
+import 'package:meu_app/features/radio/providers/radio_player_ui_provider.dart';
+import 'package:meu_app/features/radio/screens/player_ui_models.dart';
 import 'package:meu_app/features/radio/widgets/live_pulsing_indicator.dart';
 import 'package:meu_app/features/radio/widgets/radio_transport_controls.dart';
 
 /// Bible FM: layout **mobile-first** — base para telemóvel, depois tablet/paisagem.
-/// Título no topo, cartão centralizado, barra com play e live (pílula).
-class RadioPlayerPage extends ConsumerWidget {
+/// Estado de leitura / contador / live: [radioPlayerUiProvider].
+///
+/// O [Consumer] no `build` fornece [WidgetRef] de forma fiável.
+class RadioPlayerPage extends StatefulWidget {
   const RadioPlayerPage({super.key});
 
-  static const Color _timerGreenLight = Color(0xFF1A3D2E);
+  @override
+  State<RadioPlayerPage> createState() => _RadioPlayerPageState();
+}
+
+class _RadioPlayerPageState extends State<RadioPlayerPage> {
   static const Color _chipGreyLight = Color(0xFFE8E8E8);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
+  Widget build(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, _) {
+        final ui = ref.watch(radioPlayerUiProvider);
+        final player = ref.read(radioPlayerUiProvider.notifier);
+        final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final pageBg =
-        isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5);
-    final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final chipGrey = isDark ? const Color(0xFF2C2C2C) : _chipGreyLight;
-    // Bandeja do contador: cinza mais claro que a pílula (contraste intencional).
+    final cardColor =
+        isDark ? scheme.surfaceContainerHighest : Colors.white;
+    // Pílula de estado: um degrau abaixo do cartão (hierarquia M3).
+    final chipGrey = isDark ? scheme.surfaceContainerHigh : _chipGreyLight;
+    // Bandeja do contador: recuada relativamente ao cartão.
     final timerTrayColor =
-        isDark ? const Color(0xFF252525) : const Color(0xFFEEEEEE);
-    final titleColor = isDark ? scheme.onSurface : Colors.black;
-    final timerColor = isDark ? scheme.primary : _timerGreenLight;
+        isDark ? scheme.surfaceContainer : const Color(0xFFEEEEEE);
+    final titleColor = scheme.onSurface;
+    final timerColor = scheme.onSurface;
 
-    final lifecycle = ref.watch(radioLifecycleProvider);
-    final elapsed = ref.watch(radioElapsedProvider);
-    final errorMessage = ref.watch(radioErrorProvider);
-    final isLiveMode = ref.watch(radioIsLiveProvider);
-    final isPlaying = ref.watch(radioIsPlayingProvider);
-    final notifier = ref.read(radioPlayerControllerProvider.notifier);
-
-    final showStreamLoading = _isBufferingLifecycle(lifecycle);
+    final showStreamLoading = isBufferingUiLifecycle(ui.lifecycle);
 
     return Semantics(
       container: true,
@@ -48,224 +53,220 @@ class RadioPlayerPage extends ConsumerWidget {
         body: Stack(
           fit: StackFit.expand,
           children: [
-            _PageBackground(color: pageBg, isDark: isDark),
+            _PageBackground(isDark: isDark),
             SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final w = constraints.maxWidth;
-                final h = constraints.maxHeight;
-                // Mobile-first: base mobile, depois overrides para tablet/landscape.
-                final isCompact = AppLayoutBreakpoints.isCompactHeight(h);
-                final isNarrow = AppLayoutBreakpoints.isNarrow(w);
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final w = constraints.maxWidth;
+                  final h = constraints.maxHeight;
+                  // Mobile-first: base mobile, depois overrides para tablet/landscape.
+                  final isCompact = AppLayoutBreakpoints.isCompactHeight(h);
+                  final isNarrow = AppLayoutBreakpoints.isNarrow(w);
 
-                final scale = AppSpacing.mobileLayoutScale(
-                  constraints.biggest.shortestSide,
-                );
-                final sidePadding = AppSpacing.g(
-                  AppSpacing.marginContentHorizontalSteps(narrow: isNarrow),
-                  scale,
-                );
-                final transportSidePadding = AppSpacing.g(
-                  AppSpacing.marginTransportHorizontalSteps(narrow: isNarrow),
-                  scale,
-                );
-                final panelPaddingH = AppSpacing.g(
-                  AppSpacing.marginPanelInnerHorizontalSteps(narrow: isNarrow),
-                  scale,
-                );
-                final panelWidth = AppLayoutBreakpoints.maxPanelWidth(w, h, scale);
+                  final scale = AppSpacing.mobileLayoutScale(
+                    constraints.biggest.shortestSide,
+                  );
+                  final sidePadding = AppSpacing.g(
+                    AppSpacing.marginContentHorizontalSteps(narrow: isNarrow),
+                    scale,
+                  );
+                  final transportSidePadding = AppSpacing.g(
+                    AppSpacing.marginTransportHorizontalSteps(narrow: isNarrow),
+                    scale,
+                  );
+                  final panelPaddingH = AppSpacing.g(
+                    AppSpacing.marginPanelInnerHorizontalSteps(narrow: isNarrow),
+                    scale,
+                  );
+                  final panelWidth = AppLayoutBreakpoints.maxPanelWidth(w, h, scale);
 
-                final playButtonSize = AppSpacing.g(
-                  AppSpacing.playControlDiameterSteps(
-                    narrow: isNarrow,
-                    compactHeight: isCompact,
-                  ),
-                  scale,
-                );
-                final bottomInset = MediaQuery.paddingOf(context).bottom;
-                final playVisualSize = playButtonSize.clamp(
-                  AppSpacing.g(AppSpacing.playControlDiameterMinSteps, scale),
-                  AppSpacing.g(AppSpacing.playControlDiameterMaxSteps, scale),
-                );
-                final postButtonGap = AppSpacing.g(
-                  AppSpacing.transportStackGapSteps(
-                    compactHeight: isCompact,
-                  ),
-                  scale,
-                );
-                final overlayContentHeight =
-                    playVisualSize + postButtonGap;
-                final barReserve = overlayContentHeight +
-                    bottomInset +
-                    AppSpacing.g(
-                      AppSpacing.transportBottomMarginSteps,
-                      scale,
-                    );
+                  final playButtonSize = AppSpacing.g(
+                    AppSpacing.playControlDiameterSteps(
+                      narrow: isNarrow,
+                      compactHeight: isCompact,
+                    ),
+                    scale,
+                  );
+                  final bottomInset = MediaQuery.paddingOf(context).bottom;
+                  final playVisualSize = playButtonSize.clamp(
+                    AppSpacing.g(AppSpacing.playControlDiameterMinSteps, scale),
+                    AppSpacing.g(AppSpacing.playControlDiameterMaxSteps, scale),
+                  );
+                  final postButtonGap = AppSpacing.g(
+                    AppSpacing.transportStackGapSteps(
+                      compactHeight: isCompact,
+                    ),
+                    scale,
+                  );
+                  final overlayContentHeight =
+                      playVisualSize + postButtonGap;
+                  final barReserve = overlayContentHeight +
+                      bottomInset +
+                      AppSpacing.g(
+                        AppSpacing.transportBottomMarginSteps,
+                        scale,
+                      );
 
-                return Stack(
-                  clipBehavior: Clip.none,
-                  fit: StackFit.expand,
-                  children: [
-                    if (showStreamLoading)
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        child: IgnorePointer(
-                          child: LinearProgressIndicator(
-                            minHeight: 3,
-                            color: scheme.primary,
-                            backgroundColor:
-                                scheme.surfaceContainerHighest.withValues(
-                              alpha: 0.35,
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    fit: StackFit.expand,
+                    children: [
+                      if (showStreamLoading)
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: IgnorePointer(
+                            child: LinearProgressIndicator(
+                              minHeight: 3,
+                              color: scheme.primary,
+                              backgroundColor:
+                                  scheme.surfaceContainerHighest.withValues(
+                                alpha: 0.35,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    Positioned.fill(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              sidePadding,
-                              AppSpacing.g(
-                                AppSpacing.sectionVerticalPaddingSteps,
-                                scale,
+                      Positioned.fill(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                sidePadding,
+                                AppSpacing.g(
+                                  AppSpacing.sectionVerticalPaddingSteps,
+                                  scale,
+                                ),
+                                sidePadding,
+                                AppSpacing.g(
+                                  AppSpacing.sectionVerticalPaddingSteps,
+                                  scale,
+                                ),
                               ),
-                              sidePadding,
-                              AppSpacing.g(
-                                AppSpacing.sectionVerticalPaddingSteps,
-                                scale,
+                              child: _BibleFmHeader(
+                                scale: scale,
+                                titleColor: titleColor,
                               ),
                             ),
-                            child: _BibleFmHeader(
-                              scale: scale,
-                              titleColor: titleColor,
-                            ),
-                          ),
-                          Expanded(
-                            child: Padding(
-                              padding: EdgeInsets.only(bottom: barReserve),
+                            Expanded(
                               child: Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: sidePadding,
-                                  vertical: AppSpacing.g(
-                                    AppSpacing.sectionVerticalPaddingSteps,
-                                    scale,
+                                padding: EdgeInsets.only(bottom: barReserve),
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: sidePadding,
+                                    vertical: AppSpacing.g(
+                                      AppSpacing.sectionVerticalPaddingSteps,
+                                      scale,
+                                    ),
                                   ),
-                                ),
-                                child: Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      _MainPlayerCard(
-                                        width: w.clamp(
-                                          AppSpacing.panelWidthCompact,
-                                          panelWidth,
-                                        ),
-                                        panelPaddingH: panelPaddingH,
-                                        cardColor: cardColor,
-                                        isDark: isDark,
-                                        scale: scale,
-                                        isCompactHeight: isCompact,
-                                        narrowMobile: isNarrow,
-                                        isPlaying: isPlaying,
-                                        isBuffering:
-                                            _isBufferingLifecycle(lifecycle),
-                                        isLiveMode: isLiveMode,
-                                        chipGrey: chipGrey,
-                                        timerTrayColor: timerTrayColor,
-                                        titleColor: titleColor,
-                                        timerColor: timerColor,
-                                        elapsed: elapsed,
-                                      ),
-                                      if (errorMessage != null) ...[
-                                        SizedBox(
-                                            height: AppSpacing.g(3, scale)),
-                                        _ErrorBanner(
-                                          message: errorMessage,
-                                          scale: scale,
-                                          onRetry: () =>
-                                              scheduleRadioPlayerAction(
-                                            () =>
-                                                notifier.togglePlayPause(),
-                                            debugLabel: 'retryAfterError',
+                                  child: Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        _MainPlayerCard(
+                                          width: w.clamp(
+                                            AppSpacing.panelWidthCompact,
+                                            panelWidth,
                                           ),
+                                          panelPaddingH: panelPaddingH,
+                                          cardColor: cardColor,
+                                          isDark: isDark,
+                                          scale: scale,
+                                          isCompactHeight: isCompact,
+                                          narrowMobile: isNarrow,
+                                          isPlaying: ui.isPlaying,
+                                          isBuffering:
+                                              isBufferingUiLifecycle(ui.lifecycle),
+                                          isLiveMode: ui.isLiveMode,
+                                          livePulseActive: ui.livePulseActive &&
+                                              ui.isEnDirect,
+                                          onLiveIndicatorTap: ui.isEnDirect
+                                              ? player.toggleLivePulse
+                                              : null,
+                                          chipGrey: chipGrey,
+                                          timerTrayColor: timerTrayColor,
+                                          titleColor: titleColor,
+                                          timerColor: timerColor,
+                                          elapsed: ui.elapsed,
+                                          onTimerTap: player.resetElapsed,
                                         ),
+                                        if (ui.errorMessage != null) ...[
+                                          SizedBox(
+                                              height: AppSpacing.g(3, scale)),
+                                          _ErrorBanner(
+                                            message: ui.errorMessage!,
+                                            scale: scale,
+                                            onRetry: player.retryAfterError,
+                                          ),
+                                        ],
                                       ],
-                                    ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      left: transportSidePadding,
-                      right: transportSidePadding,
-                      bottom: bottomInset +
-                          AppSpacing.g(
-                            AppSpacing.transportBottomMarginSteps,
-                            scale,
-                          ),
-                      child: Material(
-                        color: Colors.transparent,
-                        // Por último no Stack: toques na barra têm prioridade.
-                        child: RadioTransportControls(
-                          scale: scale,
-                          playVisualSize: playVisualSize,
-                          isDark: isDark,
-                          narrowMobile: isNarrow,
+                          ],
                         ),
                       ),
-                    ),
-                  ],
-                );
-              },
+                      Positioned(
+                        left: transportSidePadding,
+                        right: transportSidePadding,
+                        bottom: bottomInset +
+                            AppSpacing.g(
+                              AppSpacing.transportBottomMarginSteps,
+                              scale,
+                            ),
+                        child: Material(
+                          color: Colors.transparent,
+                          // Por último no Stack: toques na barra têm prioridade.
+                          child: RadioTransportControls(
+                            scale: scale,
+                            playVisualSize: playVisualSize,
+                            isDark: isDark,
+                            narrowMobile: isNarrow,
+                            isPlaying: ui.isPlaying,
+                            isPaused:
+                                ui.lifecycle == UiPlaybackLifecycle.paused,
+                            isBuffering:
+                                isBufferingUiLifecycle(ui.lifecycle),
+                            isLiveMode: ui.isLiveMode,
+                            onCentralTap: () => unawaited(player.centralTap()),
+                            onLiveTap: ui.canTapLive ? player.liveTap : null,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
-          ),
         ],
         ),
       ),
+    );
+      },
     );
   }
 }
 
 class _PageBackground extends StatelessWidget {
-  const _PageBackground({required this.color, required this.isDark});
+  const _PageBackground({required this.isDark});
 
-  final Color color;
   final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    // Mobile-first (referência): fundo claro sólido; gradiente só em dark.
+    final scheme = Theme.of(context).colorScheme;
+    // Claro: sólido do tema. Escuro: preto uniforme.
     if (!isDark) {
-      return DecoratedBox(decoration: BoxDecoration(color: color));
+      return DecoratedBox(decoration: BoxDecoration(color: scheme.surface));
     }
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            color,
-            const Color(0xFF0A0A0A),
-          ],
-        ),
-      ),
+    return const DecoratedBox(
+      decoration: BoxDecoration(color: Colors.black),
     );
   }
-}
-
-bool _isBufferingLifecycle(RadioPlaybackLifecycle lifecycle) {
-  return lifecycle == RadioPlaybackLifecycle.preparing ||
-      lifecycle == RadioPlaybackLifecycle.buffering ||
-      lifecycle == RadioPlaybackLifecycle.reconnecting;
 }
 
 class _BibleFmHeader extends StatelessWidget {
@@ -307,174 +308,114 @@ class _DigitalTimer extends StatelessWidget {
     required this.scale,
     required this.timerTrayColor,
     required this.timerColor,
-    required this.captionColor,
-    required this.isPlaying,
-    required this.isBuffering,
+    required this.onTap,
   });
 
   final Duration elapsed;
   final double scale;
   final Color timerTrayColor;
   final Color timerColor;
-  final Color captionColor;
-  final bool isPlaying;
-  final bool isBuffering;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final mainFontSize =
         AppSpacing.responsiveTimerValueFontSize(width, scale);
-    final unitFontSize = AppTypeScale.label * 0.92 * scale;
-    final valueStyle = GoogleFonts.shareTechMono(
-      fontSize: mainFontSize,
-      fontWeight: FontWeight.w600,
-      letterSpacing: AppSpacing.gHalf(scale) * 0.0875,
-      color: timerColor,
-      height: 1.0,
-      fontFeatures: const [FontFeature.tabularFigures()],
-    );
-    final colonStyle = valueStyle.copyWith(
-      letterSpacing: 0,
-      fontSize: mainFontSize * 0.92,
-    );
-    final unitStyle = GoogleFonts.dmSans(
-      fontSize: unitFontSize,
-      fontWeight: FontWeight.w700,
-      letterSpacing: AppSpacing.gHalf(scale) * 0.05,
-      color: captionColor,
-      height: 1.0,
-    );
-    final captionStyle = GoogleFonts.dmSans(
-      fontSize: AppTypeScale.label * scale,
-      fontWeight: FontWeight.w600,
-      letterSpacing: AppSpacing.gHalf(scale) * 0.0875,
-      color: captionColor,
-      height: 1.25,
-    );
-
     final d = elapsed.isNegative ? Duration.zero : elapsed;
     final hh = d.inHours.toString().padLeft(2, '0');
     final mm = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final ss = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     final a11y = _sessionDurationSemanticsFr(d);
 
-    final String? footerLine;
-    if (isBuffering) {
-      footerLine = 'Compteur en pause pendant la connexion';
-    } else if (!isPlaying) {
-      footerLine = 'En pause — reprends la lecture pour faire avancer le temps';
-    } else {
-      footerLine = null;
-    }
-
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final timerVerticalSteps =
         AppLayoutBreakpoints.isNarrow(MediaQuery.sizeOf(context).width)
             ? 2
             : 3;
 
+    final digitStyle = GoogleFonts.jetBrainsMono(
+      fontSize: mainFontSize,
+      fontWeight: FontWeight.w500,
+      letterSpacing: 0.6,
+      height: 1.05,
+      color: timerColor,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+    final sepStyle = digitStyle.copyWith(
+      fontSize: mainFontSize * 0.82,
+      fontWeight: FontWeight.w400,
+      letterSpacing: 0,
+      color: scheme.onSurfaceVariant,
+    );
+
+    final radius = AppRadii.borderRadius(AppRadii.sm, scale);
+
     return Semantics(
-      label: 'Temps d\'écoute, $a11y',
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: timerTrayColor,
-          borderRadius: AppRadii.borderRadius(AppRadii.sm, scale),
-          border: Border.all(
-            color: scheme.outline.withValues(alpha: 0.14),
-            width: 1,
-          ),
-        ),
-        child: Padding(
-          padding: AppSpacing.insetSymmetric(
-            layoutScale: scale,
-            horizontal: 2,
-            vertical: timerVerticalSteps,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _TimerDigitColumn(
-                    value: hh,
-                    unit: 'h',
-                    layoutScale: scale,
-                    valueStyle: valueStyle,
-                    unitStyle: unitStyle,
-                  ),
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSpacing.gHalf(scale),
-                    ),
-                    child: Text('.', style: colonStyle),
-                  ),
-                  _TimerDigitColumn(
-                    value: mm,
-                    unit: 'min',
-                    layoutScale: scale,
-                    valueStyle: valueStyle,
-                    unitStyle: unitStyle,
-                  ),
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSpacing.gHalf(scale),
-                    ),
-                    child: Text('.', style: colonStyle),
-                  ),
-                  _TimerDigitColumn(
-                    value: ss,
-                    unit: 's',
-                    layoutScale: scale,
-                    valueStyle: valueStyle,
-                    unitStyle: unitStyle,
+      button: true,
+      label:
+          'Temps d\'écoute, $a11y. Toucher pour remettre le compteur à zéro.',
+      child: Tooltip(
+        message: 'Réinitialiser le compteur',
+        waitDuration: const Duration(milliseconds: 400),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: radius,
+            hoverColor: isDark
+                ? AppTheme.darkHoverOverlay(scheme)
+                : Colors.black.withValues(alpha: 0.06),
+            splashColor: isDark
+                ? AppTheme.darkHoverOverlay(scheme)
+                : Colors.black.withValues(alpha: 0.08),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: timerTrayColor,
+                borderRadius: radius,
+                border: Border.all(
+                  color: scheme.outline.withValues(alpha: isDark ? 0.16 : 0.11),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: scheme.shadow.withValues(alpha: isDark ? 0.08 : 0.06),
+                    blurRadius: AppSpacing.g(2, scale),
+                    offset: Offset(0, AppSpacing.gHalf(scale)),
                   ),
                 ],
               ),
-              if (footerLine != null) ...[
-                SizedBox(height: AppSpacing.gHalf(scale)),
-                Text(
-                  footerLine,
-                  textAlign: TextAlign.center,
-                  style: captionStyle,
+              child: Padding(
+                padding: AppSpacing.insetSymmetric(
+                  layoutScale: scale,
+                  horizontal: 3,
+                  vertical: timerVerticalSteps,
                 ),
-              ],
-            ],
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text.rich(
+                      TextSpan(
+                        style: digitStyle,
+                        children: [
+                          TextSpan(text: hh),
+                          TextSpan(text: ':', style: sepStyle),
+                          TextSpan(text: mm),
+                          TextSpan(text: ':', style: sepStyle),
+                          TextSpan(text: ss),
+                        ],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),
-    );
-  }
-}
-
-class _TimerDigitColumn extends StatelessWidget {
-  const _TimerDigitColumn({
-    required this.value,
-    required this.unit,
-    required this.layoutScale,
-    required this.valueStyle,
-    required this.unitStyle,
-  });
-
-  final String value;
-  final String unit;
-  final double layoutScale;
-  final TextStyle valueStyle;
-  final TextStyle unitStyle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(value, style: valueStyle),
-        SizedBox(height: AppSpacing.gHalf(layoutScale)),
-        Text(unit, style: unitStyle),
-      ],
     );
   }
 }
@@ -509,11 +450,14 @@ class _MainPlayerCard extends StatelessWidget {
     required this.isPlaying,
     required this.isBuffering,
     required this.isLiveMode,
+    required this.livePulseActive,
+    required this.onLiveIndicatorTap,
     required this.chipGrey,
     required this.timerTrayColor,
     required this.titleColor,
     required this.timerColor,
     required this.elapsed,
+    required this.onTimerTap,
   });
 
   final double width;
@@ -526,15 +470,18 @@ class _MainPlayerCard extends StatelessWidget {
   final bool isPlaying;
   final bool isBuffering;
   final bool isLiveMode;
+  final bool livePulseActive;
+  final VoidCallback? onLiveIndicatorTap;
   final Color chipGrey;
   final Color timerTrayColor;
   final Color titleColor;
   final Color timerColor;
   final Duration elapsed;
+  final VoidCallback onTimerTap;
 
   @override
   Widget build(BuildContext context) {
-    final isLive = isPlaying && !isBuffering && isLiveMode;
+    final scheme = Theme.of(context).colorScheme;
     final statusToTimerGap = AppSpacing.g(
       AppSpacing.marginPanelInnerHorizontalSteps(narrow: narrowMobile),
       scale,
@@ -551,8 +498,8 @@ class _MainPlayerCard extends StatelessWidget {
         borderRadius: AppRadii.borderRadius(cornerPt, scale),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(
-              alpha: isDark ? 0.35 : 0.08,
+            color: scheme.shadow.withValues(
+              alpha: isDark ? 0.32 : 0.07,
             ),
             blurRadius: AppSpacing.g(3, scale),
             offset: Offset(0, AppSpacing.g(1, scale)),
@@ -563,53 +510,40 @@ class _MainPlayerCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (isLive)
-            Padding(
-              padding: EdgeInsets.only(
-                right: AppSpacing.gHalf(scale),
-              ),
-              child: IntrinsicHeight(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    _PlaybackStatusChip(
-                      isPlaying: isPlaying,
-                      isBuffering: isBuffering,
-                      isLiveMode: isLiveMode,
-                      scale: scale,
-                      narrowMobile: narrowMobile,
-                      chipGrey: chipGrey,
-                      labelColor: titleColor,
-                      isDark: isDark,
-                    ),
-                    LivePulsingIndicator(scale: scale),
-                  ],
-                ),
-              ),
-            )
-          else
-            Center(
-              child: _PlaybackStatusChip(
-                isPlaying: isPlaying,
-                isBuffering: isBuffering,
-                isLiveMode: isLiveMode,
-                scale: scale,
-                narrowMobile: narrowMobile,
-                chipGrey: chipGrey,
-                labelColor: titleColor,
-                isDark: isDark,
-              ),
+          Padding(
+            padding: EdgeInsets.only(
+              right: AppSpacing.gHalf(scale),
             ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _PlaybackStatusChip(
+                  isPlaying: isPlaying,
+                  isBuffering: isBuffering,
+                  isLiveMode: isLiveMode,
+                  scale: scale,
+                  narrowMobile: narrowMobile,
+                  chipGrey: chipGrey,
+                  labelColor: titleColor,
+                  isDark: isDark,
+                ),
+                LivePulsingIndicator(
+                  scale: scale,
+                  isLiveMode: isLiveMode,
+                  pulseEnabled: livePulseActive,
+                  onTap: onLiveIndicatorTap,
+                ),
+              ],
+            ),
+          ),
           SizedBox(height: statusToTimerGap),
           _DigitalTimer(
             elapsed: elapsed,
             scale: scale,
             timerTrayColor: timerTrayColor,
             timerColor: timerColor,
-            captionColor: titleColor.withValues(alpha: 0.64),
-            isPlaying: isPlaying,
-            isBuffering: isBuffering,
+            onTap: onTimerTap,
           ),
         ],
       ),
@@ -729,15 +663,21 @@ class _PlaybackStatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final isListening = isPlaying && !isBuffering;
     final isLive = isListening && isLiveMode;
-    final label = isBuffering
-        ? 'Connexion'
-        : isLive
-            ? 'En direct'
-            : isListening
-                ? 'En écoute'
-                : 'En pause';
+    // Pas de libellé « Connexion » : la barre de progression en haut suffit.
+    final String label;
+    if (isLive) {
+      label = 'En direct';
+    } else if (isListening) {
+      label = 'Différé';
+    } else if (isBuffering) {
+      label = isLiveMode ? 'En direct' : 'Différé';
+    } else {
+      label = 'En pause';
+    }
 
-    const liveGreen = Color(0xFF2E7D32);
+    final scheme = Theme.of(context).colorScheme;
+    final listeningDotColor =
+        isDark ? scheme.primary : const Color(0xFF2E7D32);
 
     return Container(
       padding: AppSpacing.insetSymmetric(
@@ -756,8 +696,8 @@ class _PlaybackStatusChip extends StatelessWidget {
             Container(
               width: AppSpacing.gHalf(scale),
               height: AppSpacing.gHalf(scale),
-              decoration: const BoxDecoration(
-                color: liveGreen,
+              decoration: BoxDecoration(
+                color: listeningDotColor,
                 shape: BoxShape.circle,
               ),
             ),
@@ -771,7 +711,7 @@ class _PlaybackStatusChip extends StatelessWidget {
               letterSpacing: AppSpacing.gHalf(scale) * 0.22,
               color: isDark
                   ? labelColor.withValues(alpha: 0.92)
-                  : const Color(0xFF1A1A1A),
+                  : labelColor,
             ),
           ),
         ],

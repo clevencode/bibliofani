@@ -3,21 +3,41 @@ import 'package:meu_app/core/theme/app_spacing.dart';
 
 /// Temas Material 3 alinhados à grelha **8pt** ([AppSpacing], [AppRadii]).
 abstract final class AppTheme {
+  /// Crossfade ao mudar claro ↔ escuro ([MaterialApp.themeAnimationDuration]).
+  static const Duration themeCrossfadeDuration = Duration(milliseconds: 520);
+  static const Curve themeCrossfadeCurve = Curves.easeInOutCubicEmphasized;
+
   static ThemeData _baseTheme(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
     final scheme = isDark
-        ? const ColorScheme.dark(
-            primary: Color(0xFFB8D8A5),
-            onPrimary: Color(0xFF132011),
-            secondary: Color(0xFFF1C27B),
-            onSecondary: Color(0xFF2B1C09),
-            error: Color(0xFFF25C54),
-            onError: Color(0xFF410002),
-            surface: Color(0xFF11180F),
-            onSurface: Color(0xFFEFF8DE),
-            surfaceContainerHighest: Color(0xFF1A2517),
-            outline: Color(0xFF42523C),
-            outlineVariant: Color(0xFF313D2D),
+        ? ColorScheme.fromSeed(
+            // Neutro (sem acento verde); hierarquia M3 de superfícies.
+            seedColor: const Color(0xFF6B7280),
+            brightness: Brightness.dark,
+            surfaceTint: Colors.transparent,
+          ).copyWith(
+            surface: const Color(0xFF0F1012),
+            onSurface: const Color(0xFFE8E8ED),
+            onSurfaceVariant: const Color(0xFFB4B4BC),
+            surfaceContainerLowest: const Color(0xFF08090A),
+            surfaceContainerLow: const Color(0xFF141416),
+            surfaceContainer: const Color(0xFF1A1A1E),
+            surfaceContainerHigh: const Color(0xFF242428),
+            surfaceContainerHighest: const Color(0xFF2E2E34),
+            outline: const Color(0xFF6E6E76),
+            outlineVariant: const Color(0xFF3F3F46),
+            primary: const Color(0xFFD1D5DC),
+            onPrimary: const Color(0xFF18181B),
+            primaryContainer: const Color(0xFF3F3F46),
+            onPrimaryContainer: const Color(0xFFE8E8ED),
+            secondary: const Color(0xFF9CA3AF),
+            onSecondary: const Color(0xFF18181B),
+            error: const Color(0xFFFFB4AB),
+            onError: const Color(0xFF690005),
+            errorContainer: const Color(0xFF93000A),
+            onErrorContainer: const Color(0xFFFFDAD6),
+            shadow: Colors.black,
+            scrim: const Color(0xCC000000),
           )
         : const ColorScheme.light(
             // Estética Bible FM (mockup): neutro, texto preto, acento verde floresta.
@@ -29,6 +49,7 @@ abstract final class AppTheme {
             onError: Color(0xFFFFFFFF),
             surface: Color(0xFFF5F5F5),
             onSurface: Color(0xFF111111),
+            onSurfaceVariant: Color(0xFF49454F),
             surfaceContainerHighest: Color(0xFFFFFFFF),
             outline: Color(0xFFE0E0E0),
             outlineVariant: Color(0xFFEEEEEE),
@@ -38,7 +59,21 @@ abstract final class AppTheme {
       useMaterial3: true,
       brightness: brightness,
       colorScheme: scheme,
-      scaffoldBackgroundColor: scheme.surface,
+      scaffoldBackgroundColor: isDark ? Colors.black : scheme.surface,
+      applyElevationOverlayColor: !isDark,
+      iconTheme: IconThemeData(color: scheme.onSurface, size: 24),
+      appBarTheme: AppBarTheme(
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        backgroundColor: isDark ? Colors.black : scheme.surface,
+        foregroundColor: scheme.onSurface,
+        surfaceTintColor: Colors.transparent,
+      ),
+      dividerTheme: DividerThemeData(
+        color: scheme.outline.withValues(alpha: isDark ? 0.28 : 0.4),
+        thickness: 1,
+        space: 1,
+      ),
       cardTheme: CardThemeData(
         color: scheme.surfaceContainerHighest,
         elevation: 0,
@@ -49,7 +84,9 @@ abstract final class AppTheme {
         ),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.95),
+        backgroundColor: isDark
+            ? scheme.surfaceContainerHigh
+            : scheme.surfaceContainerHighest.withValues(alpha: 0.95),
         selectedColor: scheme.primary.withValues(alpha: 0.2),
         side: BorderSide(color: scheme.outlineVariant),
         shape: RoundedRectangleBorder(
@@ -81,4 +118,12 @@ abstract final class AppTheme {
   static ThemeData get light => _baseTheme(Brightness.light);
 
   static ThemeData get dark => _baseTheme(Brightness.dark);
+
+  /// Base do gradiente escuro (zona do rodapé), coerente com [surfaceContainerLowest].
+  static Color footerSurfaceColor(ColorScheme scheme) =>
+      Color.lerp(scheme.surface, scheme.surfaceContainerLowest, 0.72)!;
+
+  /// Hover / splash no modo escuro: mesma família cromática do rodapé.
+  static Color darkHoverOverlay(ColorScheme scheme) =>
+      footerSurfaceColor(scheme).withValues(alpha: 0.22);
 }

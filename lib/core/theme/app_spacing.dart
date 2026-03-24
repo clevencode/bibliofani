@@ -26,21 +26,9 @@ abstract final class AppSpacing {
 
   // --- Espaçamento em pt (antes de aplicar [mobileLayoutScale]) ---
 
-  static const double s0 = 0;
-  static const double s1 = 8;
   static const double s2 = 16;
   static const double s3 = 24;
   static const double s4 = 32;
-  static const double s5 = 40;
-  static const double s6 = 48;
-  static const double s7 = 56;
-  static const double s8 = 64;
-  static const double s9 = 72;
-  static const double s10 = 80;
-  static const double s11 = 88;
-  static const double s12 = 96;
-  static const double s14 = 112;
-  static const double s16 = 128;
 
   /// Alvo mínimo de toque (Material Design).
   static const double minTouchTarget = 48;
@@ -69,23 +57,6 @@ abstract final class AppSpacing {
       EdgeInsets.symmetric(
         horizontal: g(horizontal, layoutScale),
         vertical: g(vertical, layoutScale),
-      );
-
-  static EdgeInsets insetAll(int n, double layoutScale) =>
-      EdgeInsets.all(g(n, layoutScale));
-
-  static EdgeInsets insetLTRB(
-    double layoutScale, {
-    int left = 0,
-    int top = 0,
-    int right = 0,
-    int bottom = 0,
-  }) =>
-      EdgeInsets.fromLTRB(
-        g(left, layoutScale),
-        g(top, layoutScale),
-        g(right, layoutScale),
-        g(bottom, layoutScale),
       );
 
   // --- Passos da grelha (apenas inteiros n em [g]) para margens reutilizadas ---
@@ -175,10 +146,8 @@ abstract final class AppLayoutBreakpoints {
 
 /// Raios de canto alinhados à grelha 8pt.
 abstract final class AppRadii {
-  static const double xs = 8;
   static const double sm = 16;
   static const double md = 24;
-  static const double lg = 32;
   static const double pill = 999;
 
   static BorderRadius borderRadius(double radius, double layoutScale) =>
@@ -190,5 +159,4 @@ abstract final class AppTypeScale {
   static const double label = 12;
   static const double body = 14;
   static const double title = 16;
-  static const double headline = 20;
 }

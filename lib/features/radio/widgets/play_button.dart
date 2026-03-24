@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:meu_app/core/theme/app_spacing.dart';
+import 'package:meu_app/core/theme/app_theme.dart';
 
 /// Botao principal de reproducao sem container.
 class PlayButton extends StatefulWidget {
@@ -31,6 +32,7 @@ class PlayButton extends StatefulWidget {
 class _PlayButtonState extends State<PlayButton> {
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     // Trocamos entre play e pause sem animacoes de pulso.
     final iconData =
@@ -48,31 +50,45 @@ class _PlayButtonState extends State<PlayButton> {
       AppSpacing.g(4, ls),
       AppSpacing.g(6, ls),
     );
-    // Preenchimento sólido: claro = disco preto + ícone branco; escuro = disco claro + ícone escuro.
-    final fillColor =
-        isDark ? const Color(0xFFECECEC) : const Color(0xFF0D0D0D);
+    // Preenchimento sólido: claro = disco preto + ícone branco; escuro alinhado ao [ColorScheme].
+    final fillColor = isDark
+        ? scheme.surfaceContainerHigh
+        : const Color(0xFF0D0D0D);
     final borderColor = isDark
-        ? Colors.black.withValues(alpha: 0.06)
+        ? scheme.outline.withValues(alpha: 0.42)
         : Colors.black.withValues(alpha: 0.04);
-    final iconColor = isDark ? const Color(0xFF141414) : Colors.white;
+    final iconColor = isDark ? scheme.onSurface : Colors.white;
 
     final canTap = widget.enabled && widget.onTap != null;
+
+    final String a11yLabel;
+    final String tooltipMsg;
+    if (widget.isLoading) {
+      a11yLabel = 'Connexion au flux en cours';
+      tooltipMsg = 'Connexion au flux…';
+    } else if (widget.isPlaying) {
+      a11yLabel = 'Mettre en pause la lecture';
+      tooltipMsg = 'Pause';
+    } else {
+      a11yLabel = 'Lancer la lecture';
+      tooltipMsg = 'Lecture';
+    }
 
     return Semantics(
       button: true,
       enabled: canTap,
-      label: widget.isLoading
-          ? 'Chargement'
-          : widget.isPlaying
-              ? 'Mettre en pause la diffusion'
-              : 'Reprendre la diffusion',
+      label: a11yLabel,
       child: Tooltip(
-        message: widget.isPlaying ? 'Pause' : 'Lecture',
+        message: tooltipMsg,
+        waitDuration: const Duration(milliseconds: 400),
         child: InkWell(
           borderRadius: BorderRadius.circular(buttonSize),
-          hoverColor: (isDark ? Colors.black : Colors.white).withValues(
-            alpha: isDark ? 0.08 : 0.1,
-          ),
+          hoverColor: isDark
+              ? AppTheme.darkHoverOverlay(scheme)
+              : Colors.white.withValues(alpha: 0.1),
+          splashColor: isDark
+              ? AppTheme.darkHoverOverlay(scheme)
+              : Colors.white.withValues(alpha: 0.12),
           // Mantém o toque em buffering: o loading é só visual no botão.
           onTap: canTap ? widget.onTap : null,
           child: AnimatedOpacity(
@@ -89,8 +105,8 @@ class _PlayButtonState extends State<PlayButton> {
                 border: Border.all(color: borderColor, width: 1),
                 boxShadow: [
                   BoxShadow(
-                    color: (isDark ? Colors.black : Colors.black87).withValues(
-                      alpha: isDark ? 0.2 : 0.1,
+                    color: (isDark ? scheme.shadow : Colors.black87).withValues(
+                      alpha: isDark ? 0.22 : 0.1,
                     ),
                     blurRadius: AppSpacing.g(2, ls),
                     offset: Offset(0, AppSpacing.g(1, ls)),

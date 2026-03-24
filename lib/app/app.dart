@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -7,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meu_app/core/theme/app_theme.dart';
 import 'package:meu_app/core/theme/app_theme_mode_providers.dart';
 import 'package:meu_app/features/radio/screens/radio_player_page.dart';
-import 'package:meu_app/features/radio/services/radio_player_controller.dart';
 
 /// Raiz da app: tema, acessibilidade (escala de texto limitada), system UI e
 /// [restorationScopeId] para estado restaurável (Material 3).
@@ -16,14 +13,22 @@ class RadioApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(appThemeModeProvider);
+    final blend = ref.watch(themeBlendProvider);
+    final dragging = ref.watch(themeDragActiveProvider);
+    final lerped = ThemeData.lerp(
+      AppTheme.light,
+      AppTheme.dark,
+      blend.clamp(0.0, 1.0),
+    );
     return MaterialApp(
       title: 'Radio Bible FM',
       debugShowCheckedModeBanner: false,
       restorationScopeId: 'biblefm_app',
-      themeMode: themeMode,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      themeMode: ref.watch(appThemeModeProvider),
+      themeAnimationDuration:
+          dragging ? Duration.zero : AppTheme.themeCrossfadeDuration,
+      themeAnimationCurve: AppTheme.themeCrossfadeCurve,
+      theme: lerped,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -33,6 +38,8 @@ class RadioApp extends ConsumerWidget {
         Locale('fr'),
         Locale('fr', 'FR'),
         Locale('en'),
+        Locale('pt'),
+        Locale('pt', 'BR'),
       ],
       builder: (context, child) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -64,49 +71,7 @@ class RadioApp extends ConsumerWidget {
           child: content,
         );
       },
-      home: const _AppLifecycleAudioGuard(
-        child: RadioPlayerPage(),
-      ),
+      home: const RadioPlayerPage(),
     );
-  }
-}
-
-class _AppLifecycleAudioGuard extends ConsumerStatefulWidget {
-  const _AppLifecycleAudioGuard({required this.child});
-
-  final Widget child;
-
-  @override
-  ConsumerState<_AppLifecycleAudioGuard> createState() =>
-      _AppLifecycleAudioGuardState();
-}
-
-class _AppLifecycleAudioGuardState
-    extends ConsumerState<_AppLifecycleAudioGuard>
-    with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.detached) {
-      unawaited(
-        ref.read(radioPlayerControllerProvider.notifier).stopForAppExit(),
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return widget.child;
   }
 }
