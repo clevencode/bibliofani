@@ -45,11 +45,9 @@ class LiveModeButton extends StatelessWidget {
     // - live: preenchimento base (100%)
     // - differe (tocando fora do live): mesmo preenchimento com brilho reduzido
     // - pausa fora do live: sem preenchimento
-    final fillColor = isLiveMode
-        ? baseFillColor
-        : (isPaused
-            ? Colors.transparent
-            : differFillColor);
+    final fillColor = isPaused
+        ? Colors.transparent
+        : (isLiveMode ? baseFillColor : differFillColor);
     final borderColor = isDark
         ? scheme.outline.withValues(alpha: 0.55)
         : Colors.black.withValues(alpha: 0.18);
@@ -103,9 +101,9 @@ class LiveModeButton extends StatelessWidget {
       color: fillColor,
       borderRadius: BorderRadius.circular(radius),
       border: Border.all(color: borderColor, width: 1),
-      boxShadow: isLiveMode
-          ? [liveShadow]
-          : (isPaused ? const [] : [differShadow]),
+      boxShadow: isPaused
+          ? const []
+          : (isLiveMode ? [liveShadow] : [differShadow]),
     );
 
     final child = BroadcastSignalIcon(color: iconColor, size: iconSize);

@@ -4,7 +4,7 @@ import 'package:meu_app/core/theme/app_theme.dart';
 
 /// Indicador «ao vivo»: vermelho em direct, verde em differe (a tocar),
 /// cinza em pausa/idle.
-/// [pulseEnabled] controla o pulso (só en direct).
+/// A animação roda apenas durante reprodução (differe/en direct).
 class LivePulsingIndicator extends StatefulWidget {
   const LivePulsingIndicator({
     super.key,
@@ -49,13 +49,14 @@ class _LivePulsingIndicatorState extends State<LivePulsingIndicator>
   void didUpdateWidget(LivePulsingIndicator oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.pulseEnabled != widget.pulseEnabled ||
-        oldWidget.isEnDirect != widget.isEnDirect) {
+        oldWidget.isEnDirect != widget.isEnDirect ||
+        oldWidget.isPlaying != widget.isPlaying) {
       _syncPulseAnimation();
     }
   }
 
   void _syncPulseAnimation() {
-    if (widget.isEnDirect && widget.pulseEnabled) {
+    if (widget.isPlaying) {
       _pulseController.repeat();
     } else {
       _pulseController
@@ -155,9 +156,7 @@ class _LivePulsingIndicatorState extends State<LivePulsingIndicator>
           child: AnimatedBuilder(
             animation: _pulseController,
             builder: (context, child) {
-              final t = widget.isEnDirect && widget.pulseEnabled
-                  ? _pulseController.value
-                  : 0.0;
+              final t = widget.isPlaying ? _pulseController.value : 0.0;
               return Stack(
                 alignment: Alignment.center,
                 clipBehavior: Clip.none,
