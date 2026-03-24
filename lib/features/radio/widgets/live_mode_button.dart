@@ -48,9 +48,15 @@ class LiveModeButton extends StatelessWidget {
     final fillColor = isPaused
         ? Colors.transparent
         : (isLiveMode ? baseFillColor : differFillColor);
-    final borderColor = isDark
+    final differBorderColor =
+        isDark ? const Color(0xFF66BB6A) : const Color(0xFF2E7D32);
+    final liveBorderColor = const Color(0xFFE53935);
+    final idleBorderColor = isDark
         ? scheme.outline.withValues(alpha: 0.55)
         : Colors.black.withValues(alpha: 0.18);
+    final borderColor = isPaused
+        ? idleBorderColor
+        : (isLiveMode ? liveBorderColor : differBorderColor);
 
     final iconSize = (size * 0.38).clamp(
       AppSpacing.g(3, scale),

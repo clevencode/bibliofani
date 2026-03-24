@@ -139,6 +139,16 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
     _elapsedTicker = null;
   }
 
+  /// Arranque da app: inicia a reprodução e activa o modo **direct** (como play + live).
+  Future<void> autoStartLivePlayback() async {
+    if (state.lifecycle != UiPlaybackLifecycle.idle) return;
+    if (state.errorMessage != null) {
+      _emit(state.copyWith(errorMessage: null));
+    }
+    await centralTap();
+    liveTap();
+  }
+
   Future<void> centralTap() async {
     if (state.errorMessage != null) {
       _emit(state.copyWith(errorMessage: null));

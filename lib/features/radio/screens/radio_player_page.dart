@@ -14,24 +14,32 @@ import 'package:meu_app/features/radio/widgets/radio_transport_controls.dart';
 /// Bible FM: layout **mobile-first** — base para telemóvel, depois tablet/paisagem.
 /// Estado de leitura / contador / live: [radioPlayerUiProvider].
 ///
-/// O [Consumer] no `build` fornece [WidgetRef] de forma fiável.
-class RadioPlayerPage extends StatefulWidget {
+/// [ConsumerStatefulWidget] para [ref] no arranque automático e no `build`.
+class RadioPlayerPage extends ConsumerStatefulWidget {
   const RadioPlayerPage({super.key});
 
   @override
-  State<RadioPlayerPage> createState() => _RadioPlayerPageState();
+  ConsumerState<RadioPlayerPage> createState() => _RadioPlayerPageState();
 }
 
-class _RadioPlayerPageState extends State<RadioPlayerPage> {
+class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
   static const Color _chipGreyLight = Color(0xFFE8E8E8);
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(
+        ref.read(radioPlayerUiProvider.notifier).autoStartLivePlayback(),
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, _) {
-        final ui = ref.watch(radioPlayerUiProvider);
-        final player = ref.read(radioPlayerUiProvider.notifier);
-        final scheme = Theme.of(context).colorScheme;
+    final ui = ref.watch(radioPlayerUiProvider);
+    final player = ref.read(radioPlayerUiProvider.notifier);
+    final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardColor =
         isDark ? scheme.surfaceContainerHighest : Colors.white;
@@ -243,11 +251,9 @@ class _RadioPlayerPageState extends State<RadioPlayerPage> {
                 },
               ),
             ),
-        ],
+          ],
         ),
       ),
-    );
-      },
     );
   }
 }
