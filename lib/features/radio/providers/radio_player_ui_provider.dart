@@ -140,8 +140,14 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
   }
 
   /// Mensagem quando [pauseDueToNetworkLoss] actua (banner + ícone refresh na UI).
-  static const String _kConnectivityLostMessage =
-      'Sem ligação à Internet. Nova tentativa automática quando a rede voltar.';
+  static const String kConnectivityLostMessage =
+      'Pas de connexion — reprise automatique au retour du réseau.';
+
+  static const String _kConnectivityLostMessage = kConnectivityLostMessage;
+
+  /// Pausa curta antes da retoma automática (handoff Wi‑Fi/dados, DHCP, etc.).
+  static const Duration _kAutoResumeAfterOnlineDelay =
+      Duration(milliseconds: 220);
 
   /// Passo de «rattrapage» vers le direct (UI). Plusieurs taps après pause
   /// rapprochent le compteur du bord live sans le ramener à zéro d’un coup.
@@ -327,6 +333,20 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
 
     final nextLifecycle = _uiLifecycleFromPlayer(playerState);
 
+    // Offline com erro visível: não adoptar load/play do player (evita barra de
+    // progresso / «a tocar» após [stop] na perda de rede ou rebotes do stream).
+    if (_isOffline && state.errorMessage != null) {
+      switch (nextLifecycle) {
+        case UiPlaybackLifecycle.preparing:
+        case UiPlaybackLifecycle.buffering:
+        case UiPlaybackLifecycle.playing:
+          return;
+        case UiPlaybackLifecycle.idle:
+        case UiPlaybackLifecycle.paused:
+          break;
+      }
+    }
+
     if (nextLifecycle != state.lifecycle) {
       state = state.copyWith(lifecycle: nextLifecycle);
       _syncElapsedTicker();
@@ -411,18 +431,21 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
   static String _loadErrorMessage(Object e) {
     final raw = e.toString();
     final lower = raw.toLowerCase();
+    if (lower.contains('source error')) {
+      return 'Erreur du flux. Réessayez.';
+    }
     if (lower.contains('socketexception') ||
         lower.contains('failed host lookup') ||
         lower.contains('network is unreachable') ||
         lower.contains('connection refused') ||
         lower.contains('connection reset')) {
-      return 'Sem ligação ao servidor. Verifique a rede.';
+      return 'Serveur injoignable. Réessayez.';
     }
     if (lower.contains('timeout') || lower.contains('timed out')) {
-      return 'Tempo esgotado. Tente novamente.';
+      return 'Délai dépassé. Réessayez.';
     }
     if (lower.contains('certificate') || lower.contains('handshake')) {
-      return 'Erro de segurança na ligação (TLS). Tente mais tarde.';
+      return 'Erreur de sécurité. Réessayez plus tard.';
     }
     if (raw.length > 160) {
       return '${raw.substring(0, 157)}…';
@@ -432,7 +455,8 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
 
   /// Chamado quando a interface de rede volta (ex.: Wi‑Fi/dados).
   /// Se havia reprodução ou carregamento quando a rede caiu, tenta retomar sozinha;
-  /// caso contrário limpa o erro em [idle] / [paused] para o utilizador poder dar play.
+  /// caso contrário remove **apenas** [kConnectivityLostMessage] (aviso de ausência de rede).
+  /// Erros de fluxo após retoma falhada mantêm-se — evita voltar a «En pause» sem modo refresh.
   void onConnectivityRestored() {
     if (_isOffline) return;
     final wantAutoResume = _shouldAutoResumeWhenOnline;
@@ -443,7 +467,7 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
       return;
     }
 
-    if (state.errorMessage != null &&
+    if (state.errorMessage == kConnectivityLostMessage &&
         (state.lifecycle == UiPlaybackLifecycle.idle ||
             state.lifecycle == UiPlaybackLifecycle.paused)) {
       _emit(state.copyWith(errorMessage: null));
@@ -456,16 +480,14 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
   /// - **A tocar:** [stop] (modo refresh, não chip «pausa»), [idle] + mensagem;
   ///   marca retoma automática ao voltar online.
   /// - **Load activo:** [_cancelActiveTransportLoad] + mensagem; retoma automática.
-  /// - **[idle] / [paused]:** só mensagem se ainda não houver erro (sem retoma automática:
-  ///   utilizador parou ou nunca deu play).
+  /// - **[idle] / [paused]:** mensagem de rede (substitui erros antigos para UX coerente
+  ///   durante a ausência de rede; sem retoma automática).
   Future<void> pauseDueToNetworkLoss() async {
     _pausedForAudioInterruption = false;
     switch (state.lifecycle) {
       case UiPlaybackLifecycle.idle:
       case UiPlaybackLifecycle.paused:
-        if (state.errorMessage == null) {
-          _emit(state.copyWith(errorMessage: _kConnectivityLostMessage));
-        }
+        _emit(state.copyWith(errorMessage: _kConnectivityLostMessage));
         return;
       case UiPlaybackLifecycle.preparing:
       case UiPlaybackLifecycle.buffering:
@@ -497,6 +519,8 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
   /// Após [onConnectivityRestored] quando havia leitura ou buffer activo antes do offline.
   Future<void> _resumePlaybackAfterConnectivityRestored() async {
     if (_isOffline) return;
+    await Future<void>.delayed(_kAutoResumeAfterOnlineDelay);
+    if (_isOffline) return;
     await _retryAfterErrorAsync();
     if (_isOffline) return;
     if (state.lifecycle != UiPlaybackLifecycle.idle) return;
@@ -514,6 +538,15 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
           context: ErrorDescription('_resumePlaybackAfterConnectivityRestored'),
         ),
       );
+      if (state.errorMessage == null &&
+          (state.lifecycle == UiPlaybackLifecycle.idle ||
+              state.lifecycle == UiPlaybackLifecycle.paused)) {
+        _emit(
+          _ecouteLivePresentation(state).copyWith(
+            errorMessage: _loadErrorMessage(e),
+          ),
+        );
+      }
     }
   }
 
@@ -537,6 +570,15 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
           context: ErrorDescription('recoverPlaybackSoft'),
         ),
       );
+      if (state.errorMessage == null &&
+          (state.lifecycle == UiPlaybackLifecycle.idle ||
+              state.lifecycle == UiPlaybackLifecycle.paused)) {
+        _emit(
+          _ecouteLivePresentation(state).copyWith(
+            errorMessage: _loadErrorMessage(e),
+          ),
+        );
+      }
     }
   }
 

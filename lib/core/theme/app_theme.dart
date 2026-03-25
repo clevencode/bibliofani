@@ -351,14 +351,23 @@ abstract final class AppTheme {
           : const Color(0xFFFF8B7B);
 
   /// Fundo da pílula «En direct / Différé / En pause»: lavado suave com a mesma família cromática do círculo.
+  /// [neutralPause]: «En pause» voluntário — cinza neutro (sem tom de erro).
   static Color statusPillBackground({
     required ColorScheme scheme,
     required Brightness brightness,
     required bool isListening,
     required bool isLiveMode,
+    bool neutralPause = false,
   }) {
     final isDark = brightness == Brightness.dark;
     if (!isListening) {
+      if (neutralPause) {
+        return Color.lerp(
+          scheme.surfaceContainerLow,
+          scheme.outline,
+          isDark ? 0.22 : 0.14,
+        )!;
+      }
       return Color.lerp(
         scheme.surfaceContainerLow,
         transportPausedPulseColor(brightness),
@@ -385,10 +394,14 @@ abstract final class AppTheme {
     required Brightness brightness,
     required bool isListening,
     required bool isLiveMode,
+    bool neutralPause = false,
   }) {
     final isDark = brightness == Brightness.dark;
     final edge = scheme.outline.withValues(alpha: isDark ? 0.75 : 0.88);
     if (!isListening) {
+      if (neutralPause) {
+        return scheme.outline.withValues(alpha: isDark ? 0.52 : 0.58);
+      }
       return Color.lerp(edge, transportPausedPulseColor(brightness), 0.42)!;
     }
     if (isLiveMode) {

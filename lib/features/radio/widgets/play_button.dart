@@ -14,6 +14,7 @@ class PlayButton extends StatefulWidget {
     this.enabled = true,
     this.isOffline = false,
     this.onOfflineRestartApp,
+    this.recoveryUiActive = false,
     this.refreshRestartsEntireApp = true,
     this.layoutScale,
   });
@@ -32,8 +33,11 @@ class PlayButton extends StatefulWidget {
   /// Sem rede e sem leitura activa: explica tooltip / acessibilidade.
   final bool isOffline;
 
-  /// Quando não-null e sem reprodução/carregamento: ícone [Icons.refresh_rounded] e reinício da app (pai decide: offline, erro, etc.).
+  /// Quando não-null: ícone [Icons.refresh_rounded] (também durante load se [recoveryUiActive]).
   final VoidCallback? onOfflineRestartApp;
+
+  /// Offline ou erro: refresh prevalece sobre o spinner de load.
+  final bool recoveryUiActive;
 
   /// Quando false (ex.: online com erro), o refresh só tenta religar o fluxo, não reinicia o processo.
   final bool refreshRestartsEntireApp;
@@ -51,9 +55,9 @@ class _PlayButtonState extends State<PlayButton> {
     final brightness = Theme.of(context).brightness;
     final isDark = brightness == Brightness.dark;
     final ls = widget.layoutScale ?? 1.0;
-    // Offline/erro: refresh em vez de play (pai só passa callback fora de load).
-    final restartMode =
-        !widget.isLoading && widget.onOfflineRestartApp != null;
+    // Offline/erro: refresh em vez de play ou spinner, em qualquer fase do transporte.
+    final restartMode = widget.onOfflineRestartApp != null &&
+        (!widget.isLoading || widget.recoveryUiActive);
     final IconData iconData = restartMode
         ? Icons.refresh_rounded
         : (widget.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded);
@@ -146,7 +150,7 @@ class _PlayButtonState extends State<PlayButton> {
                 color: fillColor,
               ),
               child: Center(
-                child: widget.isLoading
+                child: widget.isLoading && !restartMode
                     ? SizedBox(
                         width: progressSize,
                         height: progressSize,
