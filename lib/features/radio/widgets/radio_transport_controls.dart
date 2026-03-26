@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:meu_app/features/radio/screens/player_ui_models.dart';
 import 'package:meu_app/features/radio/widgets/live_mode_button.dart';
 import 'package:meu_app/features/radio/widgets/play_button.dart';
 
@@ -9,50 +10,85 @@ class RadioTransportControls extends StatelessWidget {
     required this.scale,
     required this.playVisualSize,
     required this.narrowMobile,
+    required this.isOffline,
+    required this.playbackLifecycle,
     required this.isPlaying,
     required this.isPaused,
-    required this.isConnecting,
+    required this.isBuffering,
+    required this.isPreparing,
     required this.isLiveMode,
-    required this.showStoppedWhenIdle,
-    required this.onCentralTap,
+    required this.onTransportTap,
     required this.onLiveTap,
+    this.onOfflineRestartApp,
+    this.recoveryUiActive = false,
+    this.refreshRestartsEntireApp = true,
   });
 
   final double scale;
   final double playVisualSize;
   final bool narrowMobile;
+  /// Sem interface de rede: limita play (exceto pausa / cancelar buffer) e direct.
+  final bool isOffline;
+  /// Ordem dos estados: idle → preparar → buffer → play/pause; direct só após fluxo.
+  final UiPlaybackLifecycle playbackLifecycle;
   final bool isPlaying;
   final bool isPaused;
-  /// Ligação ao stream ou buffer (ecrã de espera + ícone de carregar no play).
-  final bool isConnecting;
+  /// [preparing] ou [buffering] — ver [isTransportLoadingUiLifecycle].
+  final bool isBuffering;
+  /// Só [preparing] (antes de [buffering]) — texto distinto no botão play.
+  final bool isPreparing;
   final bool isLiveMode;
-  /// [idle] com erro de stream: mesmo ícone de **pausa** que durante a escuta (toque = retry).
-  final bool showStoppedWhenIdle;
-  final VoidCallback onCentralTap;
-  /// Null quando não há sessão de escuta (idle ou a ligar ao stream).
+  /// Botão play/pause — só transporte ([RadioPlayerUiNotifier.transportTap]).
+  final VoidCallback onTransportTap;
+  /// Botão live — só modo direct ([RadioPlayerUiNotifier.liveTap]); null se indisponível.
   final VoidCallback? onLiveTap;
+
+  /// Sem leitura activa: reiniciar a app (ícone atualizar); o pai define quando (offline, erro, …).
+  final VoidCallback? onOfflineRestartApp;
+
+  /// True quando [isOffline] ou erro: o refresh prevalece sobre o indicador de load.
+  final bool recoveryUiActive;
+
+  /// Se false, o ícone refresh representa religar o fluxo (online), não [Restart] do processo.
+  final bool refreshRestartsEntireApp;
 
   @override
   Widget build(BuildContext context) {
+    // Refresh visível offline/erro também durante preparing/buffering.
+    final showRestartTransport = onOfflineRestartApp != null &&
+        (!isBuffering || recoveryUiActive);
+    final playEnabled =
+        !isOffline || isPlaying || isBuffering || showRestartTransport;
+
     return Semantics(
       container: true,
-      label:
-          'Controlo de reprodução: tocar ou pausar à esquerda, directo à direita',
+      label: isOffline || showRestartTransport
+          ? (refreshRestartsEntireApp
+                ? 'Contrôles : pause, annuler le chargement, ou reiniciar a app si besoin'
+                : 'Contrôles : pause, annuler le chargement, ou reconectar ao fluxo')
+          : 'Ordre : lecture ou pause, puis direct à droite une fois le flux prêt',
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           PlayButton(
             isPlaying: isPlaying,
-            isLoading: isConnecting,
-            showStoppedWhenIdle: showStoppedWhenIdle,
-            onTap: onCentralTap,
+            isLoading: isBuffering,
+            isPreparing: isPreparing,
+            onTap: onTransportTap,
             size: playVisualSize,
             layoutScale: scale,
+            enabled: playEnabled,
+            isOffline: isOffline,
+            onOfflineRestartApp: onOfflineRestartApp,
+            recoveryUiActive: recoveryUiActive,
+            refreshRestartsEntireApp: refreshRestartsEntireApp,
           ),
           LiveModeButton(
+            playbackLifecycle: playbackLifecycle,
             isLiveMode: isLiveMode,
             isPaused: isPaused,
+            isOffline: isOffline,
             onPressed: onLiveTap,
             scale: scale,
             size: playVisualSize,

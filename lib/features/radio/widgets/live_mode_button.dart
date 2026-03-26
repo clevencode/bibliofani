@@ -3,22 +3,28 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:meu_app/core/theme/app_spacing.dart';
 import 'package:meu_app/core/theme/app_theme.dart';
+import 'package:meu_app/features/radio/screens/player_ui_models.dart';
 import 'package:meu_app/features/radio/widgets/broadcast_signal_icon.dart';
 
 /// Botão de modo direto em formato **pílula** (barra de transporte).
 class LiveModeButton extends StatelessWidget {
   const LiveModeButton({
     super.key,
+    required this.playbackLifecycle,
     required this.isLiveMode,
     required this.isPaused,
+    required this.isOffline,
     required this.onPressed,
     required this.scale,
     required this.size,
     this.narrowMobile = false,
   });
 
+  /// Ordem: idle → carregar → play/pause; direct só após haver sessão de leitura.
+  final UiPlaybackLifecycle playbackLifecycle;
   final bool isLiveMode;
   final bool isPaused;
+  final bool isOffline;
   final VoidCallback? onPressed;
   final double scale;
 
@@ -55,21 +61,28 @@ class LiveModeButton extends StatelessWidget {
     final canTap = onPressed != null;
     String semanticsLabel;
     String tooltipMsg;
-    if (!canTap) {
-      semanticsLabel = 'Directo: inicia ou retoma a escuta primeiro';
+    if (isOffline) {
+      semanticsLabel = 'Direct indisponível sem rede';
+      tooltipMsg = 'Sem ligação à Internet';
+    } else if (isTransportLoadingUiLifecycle(playbackLifecycle)) {
+      semanticsLabel = 'Directo após o fluxo estabilizar';
+      tooltipMsg = 'Aguarde o fluxo estabilizar antes do directo';
+    } else if (playbackLifecycle == UiPlaybackLifecycle.idle) {
+      semanticsLabel = 'Directo após iniciar a leitura';
+      tooltipMsg = 'Inicie a leitura antes de activar o directo';
+    } else if (isLiveMode && !isPaused && !canTap) {
+      semanticsLabel = 'Direct actif';
+      tooltipMsg = 'Direct actif';
+    } else if (isLiveMode && isPaused && canTap) {
+      semanticsLabel = 'Rattraper le direct par paliers';
       tooltipMsg =
-          'Com a rádio em pausa ou parada, usa o botão play antes do live';
-    } else if (isPaused) {
-      semanticsLabel = 'Ir ao directo: retoma e renova a ligação ao stream';
-      tooltipMsg =
-          'Retoma a reprodução ligando de novo ao instante em directo';
-    } else if (isLiveMode) {
-      semanticsLabel = 'Afinar alinhamento com o directo';
-      tooltipMsg =
-          'Toca outra vez para aproximar o contador do instante em antena';
+          'Rapprocher le compteur du direct sans remettre à zéro (répéter après pause)';
+    } else if (canTap) {
+      semanticsLabel = 'Passer en écoute du direct';
+      tooltipMsg = 'Écouter le direct';
     } else {
-      semanticsLabel = 'Ir ao instante em directo';
-      tooltipMsg = 'Liga de novo ao stream em directo e activa o modo directo';
+      semanticsLabel = 'Direct : mettre la lecture en pause pour activer';
+      tooltipMsg = 'Mettre la lecture en pause pour activer l’écoute du direct';
     }
 
     final radius = size / 2;
@@ -116,7 +129,9 @@ class LiveModeButton extends StatelessWidget {
         child: child,
       ),
     );
-    if (!canTap && !isLiveMode) {
+    if (isOffline) {
+      pill = Opacity(opacity: 0.65, child: pill);
+    } else if (!canTap && !isLiveMode) {
       pill = Opacity(opacity: 0.5, child: pill);
     }
 

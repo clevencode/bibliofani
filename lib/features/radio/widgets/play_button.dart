@@ -2,30 +2,45 @@ import 'package:flutter/material.dart';
 import 'package:meu_app/core/theme/app_spacing.dart';
 import 'package:meu_app/core/theme/app_theme.dart';
 
-/// Botão principal de reprodução (play / pausa / ligar) sem container extra.
+/// Botao principal de reproducao sem container.
 class PlayButton extends StatefulWidget {
   const PlayButton({
     super.key,
     required this.isPlaying,
     required this.isLoading,
+    this.isPreparing = false,
     required this.onTap,
     this.size = 96,
     this.enabled = true,
-    this.showStoppedWhenIdle = false,
+    this.isOffline = false,
+    this.onOfflineRestartApp,
+    this.recoveryUiActive = false,
+    this.refreshRestartsEntireApp = true,
     this.layoutScale,
   });
 
   final bool isPlaying;
   final bool isLoading;
+
+  /// Quando [isLoading] é verdadeiro: fase [preparing] vs [buffering] (textos distintos).
+  final bool isPreparing;
   final VoidCallback? onTap;
   final double size;
 
-  /// Quando não há reprodução mas o stream está **parado por erro** (rede, servidor…),
-  /// mostra o mesmo ícone **pausa** que durante a reprodução — paridade visual com o estado online.
-  final bool showStoppedWhenIdle;
-
   /// Quando false, o toque é ignorado (ex.: operação bloqueada por outra camada).
   final bool enabled;
+
+  /// Sem rede e sem leitura activa: explica tooltip / acessibilidade.
+  final bool isOffline;
+
+  /// Quando não-null: ícone [Icons.refresh_rounded] (também durante load se [recoveryUiActive]).
+  final VoidCallback? onOfflineRestartApp;
+
+  /// Offline ou erro: refresh prevalece sobre o spinner de load.
+  final bool recoveryUiActive;
+
+  /// Quando false (ex.: online com erro), o refresh só tenta religar o fluxo, não reinicia o processo.
+  final bool refreshRestartsEntireApp;
 
   /// Escala mobile-first para sombra (8pt); opcional.
   final double? layoutScale;
@@ -39,11 +54,13 @@ class _PlayButtonState extends State<PlayButton> {
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
     final isDark = brightness == Brightness.dark;
-    final usePauseGlyph =
-        widget.isPlaying || (widget.showStoppedWhenIdle && !widget.isLoading);
-    final iconData =
-        usePauseGlyph ? Icons.pause_rounded : Icons.play_arrow_rounded;
     final ls = widget.layoutScale ?? 1.0;
+    // Offline/erro: refresh em vez de play ou spinner, em qualquer fase do transporte.
+    final restartMode = widget.onOfflineRestartApp != null &&
+        (!widget.isLoading || widget.recoveryUiActive);
+    final IconData iconData = restartMode
+        ? Icons.refresh_rounded
+        : (widget.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded);
     final buttonSize = widget.size.clamp(
       AppSpacing.g(AppSpacing.playControlDiameterMinSteps, ls),
       AppSpacing.g(AppSpacing.playControlDiameterMaxSteps, ls),
@@ -60,22 +77,40 @@ class _PlayButtonState extends State<PlayButton> {
     final fillColor = AppTheme.transportPlayFill(brightness);
     final iconColor = AppTheme.transportPlayIcon(brightness);
 
-    final canTap = widget.enabled && widget.onTap != null;
+    final canTap = restartMode ||
+        (widget.enabled && widget.onTap != null);
+    final effectiveOpacity = restartMode || widget.enabled ? 1.0 : 0.45;
 
     final String a11yLabel;
     final String tooltipMsg;
-    if (widget.isLoading) {
-      a11yLabel = 'A ligar ao stream';
-      tooltipMsg = 'A ligar…';
+    if (restartMode) {
+      if (widget.refreshRestartsEntireApp) {
+        a11yLabel = 'Reiniciar a aplicação';
+        tooltipMsg = widget.isOffline
+            ? 'Sem ligação — reiniciar a app ou restabeleça a rede'
+            : 'Erro no fluxo — reiniciar a app ou tente novamente';
+      } else {
+        a11yLabel = 'Tentar religar o fluxo';
+        tooltipMsg =
+            'Erro ou interrupção — toque para voltar a ligar à rádio';
+      }
+    } else if (widget.isOffline && !widget.isPlaying && !widget.isLoading) {
+      a11yLabel = 'Lecture indisponible sans connexion réseau';
+      tooltipMsg = 'Sem ligação à Internet';
+    } else if (widget.isLoading) {
+      if (widget.isPreparing) {
+        a11yLabel = 'A preparar o fluxo de áudio';
+        tooltipMsg = 'A preparar o fluxo…';
+      } else {
+        a11yLabel = 'A ligar ao fluxo';
+        tooltipMsg = 'A ligar ao fluxo…';
+      }
     } else if (widget.isPlaying) {
-      a11yLabel = 'Pausar a escuta';
-      tooltipMsg = 'Pausar';
-    } else if (widget.showStoppedWhenIdle) {
-      a11yLabel = 'Tentar ligar de novo ao stream';
-      tooltipMsg = 'Tentar de novo';
+      a11yLabel = 'Mettre en pause la lecture';
+      tooltipMsg = 'Pause';
     } else {
-      a11yLabel = 'Iniciar reprodução';
-      tooltipMsg = 'Tocar';
+      a11yLabel = 'Lancer la lecture';
+      tooltipMsg = 'Lecture';
     }
 
     return Semantics(
@@ -93,11 +128,18 @@ class _PlayButtonState extends State<PlayButton> {
           splashColor: isDark
               ? Colors.black.withValues(alpha: 0.1)
               : Colors.white.withValues(alpha: 0.18),
-          // Em ligação: o toque cancela e repõe idle (equivale a parar o arranque).
-          onTap: canTap ? widget.onTap : null,
+          onTap: canTap
+              ? () {
+                  if (restartMode) {
+                    widget.onOfflineRestartApp?.call();
+                  } else {
+                    widget.onTap?.call();
+                  }
+                }
+              : null,
           child: AnimatedOpacity(
             duration: const Duration(milliseconds: 180),
-            opacity: widget.enabled ? 1 : 0.45,
+            opacity: effectiveOpacity,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOutCubic,
@@ -108,7 +150,7 @@ class _PlayButtonState extends State<PlayButton> {
                 color: fillColor,
               ),
               child: Center(
-                child: widget.isLoading
+                child: widget.isLoading && !restartMode
                     ? SizedBox(
                         width: progressSize,
                         height: progressSize,

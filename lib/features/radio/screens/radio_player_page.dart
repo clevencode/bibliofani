@@ -2,12 +2,14 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:meu_app/core/app/app_restart.dart';
+import 'package:meu_app/core/network/network_connectivity_provider.dart';
+import 'package:meu_app/core/platform/android_post_notifications.dart';
 import 'package:meu_app/core/theme/app_spacing.dart';
 import 'package:meu_app/core/theme/app_theme.dart';
-import 'package:meu_app/core/errors/playback_error_mapper.dart';
-import 'package:meu_app/core/network/connectivity_providers.dart';
 import 'package:meu_app/core/theme/app_theme_mode_toggle.dart';
 import 'package:meu_app/features/radio/providers/radio_player_ui_provider.dart';
 import 'package:meu_app/features/radio/screens/player_ui_models.dart';
@@ -31,27 +33,65 @@ class RadioPlayerPage extends ConsumerStatefulWidget {
 }
 
 class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
+  /// Arranque automático adiado: abriu sem rede e ainda não tocou play.
+  bool _deferAutostartUntilOnline = false;
+
   @override
   void initState() {
     super.initState();
-    _schedulePlaybackAfterFirstFrame();
-  }
-
-  /// Espera um frame renderizado para não competir com o layout/tema no arranque.
-  void _schedulePlaybackAfterFirstFrame() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      unawaited(
-        ref.read(radioPlayerUiProvider.notifier).autoStartLivePlayback(),
-      );
+      unawaited(ensureAndroidPostNotificationsPermission());
+      unawaited(_maybeAutoStartAfterConnectivity());
     });
+  }
+
+  /// Primeira leitura de rede; se estiver offline, marca arranque quando voltar a haver rede.
+  Future<void> _maybeAutoStartAfterConnectivity() async {
+    if (!mounted) return;
+    await ref.read(networkLinkProvider.notifier).initialConnectivityFuture;
+    if (!mounted) return;
+    if (ref.read(networkOfflineProvider)) {
+      _deferAutostartUntilOnline = true;
+      return;
+    }
+    _deferAutostartUntilOnline = false;
+    await ref.read(radioPlayerUiProvider.notifier).autoStartLivePlayback();
+  }
+
+  /// Refresh: offline reinicia o processo; online só repõe o leitor e religa o fluxo.
+  Future<void> _onRefreshPressed() async {
+    if (!mounted) return;
+    if (ref.read(networkOfflineProvider)) {
+      await restartApplication();
+      return;
+    }
+    await ref.read(radioPlayerUiProvider.notifier).recoverPlaybackSoft();
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<RadioNetworkLink>(networkLinkProvider, (previous, next) {
+      final wasOffline = previous == RadioNetworkLink.offline;
+      final onlineNow = next != RadioNetworkLink.offline;
+      if (wasOffline && onlineNow) {
+        final radio = ref.read(radioPlayerUiProvider.notifier);
+        radio.onConnectivityRestored();
+        if (_deferAutostartUntilOnline) {
+          _deferAutostartUntilOnline = false;
+          unawaited(radio.autoStartLivePlayback());
+        }
+      }
+      if (next == RadioNetworkLink.wifi &&
+          previous != null &&
+          previous != RadioNetworkLink.wifi &&
+          previous != RadioNetworkLink.unknown) {
+        HapticFeedback.selectionClick();
+      }
+    });
+
     final ui = ref.watch(radioPlayerUiProvider);
     final player = ref.read(radioPlayerUiProvider.notifier);
-    final hasNetwork = ref.watch(hasNetworkProvider);
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardColor = scheme.surfaceContainerHighest;
@@ -59,7 +99,12 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
     final titleColor = scheme.onSurface;
     final timerColor = scheme.onSurface;
 
-    final showStreamLoading = isConnectingLifecycle(ui.lifecycle);
+    final networkLink = ref.watch(networkLinkProvider);
+    final isOffline = networkLink.isOffline;
+    /// Offline ou qualquer erro: modo refresh (botão e mensagens) em qualquer fase do transporte.
+    final needsRecoveryRefresh = isOffline || ui.errorMessage != null;
+    final showStreamLoading = isTransportLoadingUiLifecycle(ui.lifecycle) &&
+        !needsRecoveryRefresh;
 
     return Semantics(
       container: true,
@@ -135,17 +180,6 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                     clipBehavior: Clip.none,
                     fit: StackFit.expand,
                     children: [
-                      if (!hasNetwork && ui.errorMessage == null)
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          child: _OfflineConnectivityStrip(
-                            scale: scale,
-                            scheme: scheme,
-                            isDark: isDark,
-                          ),
-                        ),
                       if (showStreamLoading)
                         Positioned(
                           top: 0,
@@ -177,9 +211,22 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                                   scale,
                                 ),
                               ),
-                              child: _BibleFmHeader(
-                                scale: scale,
-                                titleColor: titleColor,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _BibleFmHeader(
+                                    scale: scale,
+                                    titleColor: titleColor,
+                                  ),
+                                  if (networkLink.showsTransportHint) ...[
+                                    SizedBox(height: AppSpacing.gHalf(scale)),
+                                    _NetworkTransportHint(
+                                      link: networkLink,
+                                      scale: scale,
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
                             Expanded(
@@ -195,6 +242,14 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                                   ),
                                   child: LayoutBuilder(
                                     builder: (context, innerConstraints) {
+                                      final cardDisplayWidth =
+                                          AppSpacing.clampCardContentWidth(
+                                        contentWidth:
+                                            innerConstraints.maxWidth,
+                                        panelCap: panelWidth,
+                                        contentWidthFraction:
+                                            cardWidthFraction,
+                                      );
                                       return SingleChildScrollView(
                                         clipBehavior: Clip.none,
                                         physics: const ClampingScrollPhysics(),
@@ -209,25 +264,44 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                                                   MainAxisAlignment.center,
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
+                                                // Cartão «sem rede» só se o topo ainda não mostra erro.
+                                                if (isOffline && ui.errorMessage == null) ...[
+                                                  SizedBox(
+                                                    width: cardDisplayWidth,
+                                                    child: _OfflineBanner(
+                                                        scale: scale),
+                                                  ),
+                                                  SizedBox(
+                                                    height: AppSpacing.g(
+                                                      3,
+                                                      scale,
+                                                    ),
+                                                  ),
+                                                ],
+                                                if (ui.errorMessage != null) ...[
+                                                  SizedBox(
+                                                    width: cardDisplayWidth,
+                                                    child:
+                                                        _ErrorBanner(scale: scale),
+                                                  ),
+                                                  SizedBox(
+                                                    height: AppSpacing.g(2, scale),
+                                                  ),
+                                                ],
                                                 _MainPlayerCard(
-                                                  width:
-                                                      AppSpacing.clampCardContentWidth(
-                                                        contentWidth:
-                                                            innerConstraints
-                                                                .maxWidth,
-                                                        panelCap: panelWidth,
-                                                        contentWidthFraction:
-                                                            cardWidthFraction,
-                                                      ),
+                                                  width: cardDisplayWidth,
                                                   panelPaddingH: panelPaddingH,
                                                   cardColor: cardColor,
                                                   isDark: isDark,
                                                   scale: scale,
                                                   isCompactHeight: isCompact,
                                                   narrowMobile: isNarrow,
+                                                  isOffline: isOffline,
+                                                  hasRecoverableError:
+                                                      ui.errorMessage != null,
                                                   isPlaying: ui.isPlaying,
                                                   isBuffering:
-                                                      isConnectingLifecycle(
+                                                      isTransportLoadingUiLifecycle(
                                                         ui.lifecycle,
                                                       ),
                                                   isLiveMode: ui.isLiveMode,
@@ -235,34 +309,19 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                                                   livePulseActive:
                                                       ui.livePulseActive &&
                                                       ui.isEnDirect,
-                                                  onLiveIndicatorTap:
-                                                      ui.isEnDirect
-                                                      ? player.toggleLivePulse
-                                                      : null,
+                                                  onLiveIndicatorTap: isOffline
+                                                      ? null
+                                                      : ui.isEnDirect
+                                                          ? player
+                                                              .toggleLivePulse
+                                                          : (ui.canTapLive
+                                                                ? player.liveTap
+                                                                : null),
                                                   timerTrayColor:
                                                       timerTrayColor,
                                                   titleColor: titleColor,
                                                   timerColor: timerColor,
                                                 ),
-                                                if (ui.errorMessage !=
-                                                    null) ...[
-                                                  SizedBox(
-                                                    height: AppSpacing.g(
-                                                      3,
-                                                      scale,
-                                                    ),
-                                                  ),
-                                                  _ErrorBanner(
-                                                    message: ui.errorMessage!,
-                                                    isOfflineError:
-                                                        ui.errorKind ==
-                                                        PlaybackErrorKind
-                                                            .offline,
-                                                    scale: scale,
-                                                    onRetry:
-                                                        player.retryAfterError,
-                                                  ),
-                                                ],
                                               ],
                                             ),
                                           ),
@@ -292,15 +351,24 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                             scale: scale,
                             playVisualSize: playVisualSize,
                             narrowMobile: isNarrow,
+                            isOffline: isOffline,
+                            playbackLifecycle: ui.lifecycle,
                             isPlaying: ui.isPlaying,
                             isPaused:
                                 ui.lifecycle == UiPlaybackLifecycle.paused,
-                            isConnecting: isConnectingLifecycle(ui.lifecycle),
+                            isBuffering: isTransportLoadingUiLifecycle(ui.lifecycle),
+                            isPreparing:
+                                ui.lifecycle == UiPlaybackLifecycle.preparing,
                             isLiveMode: ui.isLiveMode,
-                            showStoppedWhenIdle:
-                                ui.errorMessage != null && !ui.isPlaying,
-                            onCentralTap: () => unawaited(player.centralTap()),
-                            onLiveTap: ui.canTapLive ? player.liveTap : null,
+                            onTransportTap: () => unawaited(player.transportTap()),
+                            onLiveTap: isOffline
+                                ? null
+                                : (ui.canTapLive ? player.liveTap : null),
+                            onOfflineRestartApp: needsRecoveryRefresh
+                                ? () => unawaited(_onRefreshPressed())
+                                : null,
+                            recoveryUiActive: needsRecoveryRefresh,
+                            refreshRestartsEntireApp: isOffline,
                           ),
                         ),
                       ),
@@ -362,6 +430,82 @@ class _BibleFmHeader extends StatelessWidget {
   }
 }
 
+/// Indicação discreta do tipo de ligação (destaque ao Wi‑Fi e aviso em dados móveis).
+class _NetworkTransportHint extends StatelessWidget {
+  const _NetworkTransportHint({
+    required this.link,
+    required this.scale,
+  });
+
+  final RadioNetworkLink link;
+  final double scale;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    late final IconData icon;
+    late final String label;
+    late final Color tint;
+    switch (link) {
+      case RadioNetworkLink.wifi:
+        icon = Icons.wifi_rounded;
+        label = 'Wi‑Fi ligado';
+        tint = scheme.primary;
+        break;
+      case RadioNetworkLink.cellular:
+        icon = Icons.signal_cellular_alt_rounded;
+        label = 'Dados móveis — pode consumir tráfego';
+        tint = scheme.tertiary;
+        break;
+      case RadioNetworkLink.ethernet:
+        icon = Icons.settings_ethernet_rounded;
+        label = 'Ethernet';
+        tint = scheme.primary;
+        break;
+      case RadioNetworkLink.vpn:
+        icon = Icons.vpn_key_rounded;
+        label = 'VPN activa';
+        tint = scheme.onSurfaceVariant;
+        break;
+      case RadioNetworkLink.other:
+        icon = Icons.podcasts_rounded;
+        label = 'Rede ligada';
+        tint = scheme.onSurfaceVariant;
+        break;
+      case RadioNetworkLink.unknown:
+      case RadioNetworkLink.offline:
+        return const SizedBox.shrink();
+    }
+
+    return Semantics(
+      label: label,
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: AppSpacing.g(2, scale) * 1.1,
+            color: tint.withValues(alpha: 0.92),
+          ),
+          SizedBox(width: AppSpacing.gHalf(scale)),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                fontSize: AppTypeScale.label * scale * 0.95,
+                fontWeight: FontWeight.w500,
+                color: scheme.onSurfaceVariant.withValues(alpha: 0.92),
+                height: 1.25,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _MainPlayerCard extends StatelessWidget {
   const _MainPlayerCard({
     required this.width,
@@ -371,6 +515,8 @@ class _MainPlayerCard extends StatelessWidget {
     required this.scale,
     required this.isCompactHeight,
     required this.narrowMobile,
+    required this.isOffline,
+    required this.hasRecoverableError,
     required this.isPlaying,
     required this.isBuffering,
     required this.isLiveMode,
@@ -389,6 +535,9 @@ class _MainPlayerCard extends StatelessWidget {
   final double scale;
   final bool isCompactHeight;
   final bool narrowMobile;
+  final bool isOffline;
+  /// Erro visível (banner / modo refresh): não mostrar «En pause» como se fosse pausa manual.
+  final bool hasRecoverableError;
   final bool isPlaying;
   final bool isBuffering;
   final bool isLiveMode;
@@ -405,6 +554,10 @@ class _MainPlayerCard extends StatelessWidget {
     final statusToTimerGap = AppSpacing.g(narrowMobile ? 2 : 3, scale);
     final timerBodyWidth = math.max(0.0, width - 2 * panelPaddingH);
     const cornerPt = AppLayoutBreakpoints.playerCardCornerPt;
+    final isListeningRow = isPlaying && !isBuffering;
+    final neutralPauseLiveDot = !hasRecoverableError &&
+        !(isOffline && !isBuffering) &&
+        !isListeningRow;
     return Container(
       width: width,
       padding: EdgeInsets.symmetric(
@@ -430,6 +583,8 @@ class _MainPlayerCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 _PlaybackStatusChip(
+                  isOffline: isOffline,
+                  hasRecoverableError: hasRecoverableError,
                   isPlaying: isPlaying,
                   isBuffering: isBuffering,
                   isLiveMode: isLiveMode,
@@ -441,8 +596,9 @@ class _MainPlayerCard extends StatelessWidget {
                 LivePulsingIndicator(
                   scale: scale,
                   isEnDirect: isEnDirect,
-                  isPlaying: isPlaying,
+                  isPlaying: hasRecoverableError ? false : isPlaying,
                   pulseEnabled: livePulseActive,
+                  neutralPause: neutralPauseLiveDot,
                   onTap: onLiveIndicatorTap,
                 ),
               ],
@@ -450,7 +606,8 @@ class _MainPlayerCard extends StatelessWidget {
           ),
           SizedBox(height: statusToTimerGap),
           VoiceBarsVisualizer(
-            isActive: isPlaying && !isBuffering,
+            isActive:
+                !hasRecoverableError && isPlaying && !isBuffering,
             scale: scale,
             barColor: timerColor,
             trayColor: timerTrayColor,
@@ -463,54 +620,78 @@ class _MainPlayerCard extends StatelessWidget {
   }
 }
 
-class _OfflineConnectivityStrip extends StatelessWidget {
-  const _OfflineConnectivityStrip({
-    required this.scale,
-    required this.scheme,
-    required this.isDark,
-  });
+class _OfflineBanner extends StatelessWidget {
+  const _OfflineBanner({required this.scale});
 
   final double scale;
-  final ColorScheme scheme;
-  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    final bg = Color.lerp(
-      scheme.tertiaryContainer,
-      scheme.surfaceContainerHighest,
-      isDark ? 0.35 : 0.55,
-    )!;
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        width: double.infinity,
-        padding: AppSpacing.insetSymmetric(
-          layoutScale: scale,
-          horizontal: 2,
-          vertical: 1,
-        ),
-        color: bg.withValues(alpha: isDark ? 0.92 : 0.97),
-        child: Row(
-          children: [
-            Icon(
-              Icons.wifi_off_rounded,
-              size: AppSpacing.g(3, scale),
-              color: scheme.onTertiaryContainer,
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Semantics(
+      container: true,
+      label:
+          'Sem ligação à Internet. Ligue os dados móveis ou o Wi‑Fi para ouvir a rádio.',
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          width: double.infinity,
+          padding: AppSpacing.insetSymmetric(
+            layoutScale: scale,
+            horizontal: 2,
+            vertical: 1,
+          ),
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHighest.withValues(
+              alpha: isDark ? 0.42 : 0.72,
             ),
-            SizedBox(width: AppSpacing.g(2, scale)),
-            Expanded(
-              child: Text(
-                'Sem rede. A Bible FM precisa de Internet para tocar.',
-                style: GoogleFonts.inter(
-                  fontSize: AppTypeScale.label * scale,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurface,
-                  height: 1.3,
+            borderRadius:
+                AppRadii.borderRadius(AppTheme.notionBlockRadius, scale),
+            border: Border.all(
+              color: scheme.outline.withValues(alpha: isDark ? 0.48 : 0.62),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.wifi_off_rounded,
+                color: scheme.primary,
+                size: AppSpacing.g(3, scale),
+              ),
+              SizedBox(width: AppSpacing.g(2, scale)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Sem ligação à Internet',
+                      style: GoogleFonts.inter(
+                        fontSize: AppTypeScale.body * scale,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurface,
+                        height: 1.35,
+                      ),
+                    ),
+                    SizedBox(height: AppSpacing.gHalf(scale)),
+                    Text(
+                      'Ligue os dados móveis ou o Wi‑Fi para ouvir a rádio.',
+                      style: GoogleFonts.inter(
+                        fontSize: AppTypeScale.label * scale,
+                        fontWeight: FontWeight.w500,
+                        color: scheme.onSurfaceVariant,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -518,97 +699,59 @@ class _OfflineConnectivityStrip extends StatelessWidget {
 }
 
 class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({
-    required this.message,
-    required this.isOfflineError,
-    required this.scale,
-    required this.onRetry,
-  });
+  const _ErrorBanner({required this.scale});
 
-  final String message;
-  final bool isOfflineError;
   final double scale;
-  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    const visible = 'Vérifiez la connexion ou réessayez.';
 
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        padding: AppSpacing.insetSymmetric(
-          layoutScale: scale,
-          horizontal: 2,
-          vertical: 1,
-        ),
-        decoration: BoxDecoration(
-          color: (isDark ? scheme.errorContainer : scheme.error).withValues(
-            alpha: isDark ? 0.28 : 0.1,
+    return Semantics(
+      container: true,
+      label: visible,
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          padding: AppSpacing.insetSymmetric(
+            layoutScale: scale,
+            horizontal: 2,
+            vertical: 1,
           ),
-          borderRadius: AppRadii.borderRadius(
-            AppTheme.notionBlockRadius,
-            scale,
-          ),
-          border: Border.all(
-            color: scheme.error.withValues(alpha: 0.55),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(
-              isOfflineError
-                  ? Icons.wifi_off_rounded
-                  : Icons.error_outline_rounded,
-              color: scheme.error,
-              size: AppSpacing.g(3, scale),
+          decoration: BoxDecoration(
+            color: (isDark ? scheme.errorContainer : scheme.error).withValues(
+              alpha: isDark ? 0.28 : 0.1,
             ),
-            SizedBox(width: AppSpacing.g(2, scale)),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    message,
-                    style: GoogleFonts.inter(
-                      fontSize: AppTypeScale.body * scale,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.error,
-                      height: 1.35,
-                    ),
-                  ),
-                  SizedBox(height: AppSpacing.gHalf(scale)),
-                  Text(
-                    isOfflineError
-                        ? 'Liga o Wi‑Fi ou os dados móveis e toca em «Tentar de novo».'
-                        : 'Se o problema continuar, tenta mais tarde.',
-                    style: GoogleFonts.inter(
-                      fontSize: AppTypeScale.label * scale,
-                      fontWeight: FontWeight.w500,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+            borderRadius: BorderRadius.zero,
+            border: Border.all(
+              color: scheme.error.withValues(alpha: 0.55),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline_rounded,
+                color: scheme.error,
+                size: AppSpacing.g(3, scale),
               ),
-            ),
-            SizedBox(width: AppSpacing.g(2, scale)),
-            TextButton(
-              onPressed: onRetry,
-              style: TextButton.styleFrom(
-                foregroundColor: scheme.error,
-                textStyle: GoogleFonts.inter(
-                  fontSize: AppTypeScale.label * scale,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.4,
+              SizedBox(width: AppSpacing.g(2, scale)),
+              Expanded(
+                child: Text(
+                  visible,
+                  style: GoogleFonts.inter(
+                    fontSize: AppTypeScale.body * scale,
+                    fontWeight: FontWeight.w500,
+                    color: scheme.onSurfaceVariant,
+                    height: 1.35,
+                  ),
                 ),
               ),
-              child: const Text('TENTAR DE NOVO'),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -617,6 +760,8 @@ class _ErrorBanner extends StatelessWidget {
 
 class _PlaybackStatusChip extends StatelessWidget {
   const _PlaybackStatusChip({
+    required this.isOffline,
+    required this.hasRecoverableError,
     required this.isPlaying,
     required this.isBuffering,
     required this.isLiveMode,
@@ -626,6 +771,8 @@ class _PlaybackStatusChip extends StatelessWidget {
     required this.isDark,
   });
 
+  final bool isOffline;
+  final bool hasRecoverableError;
   final bool isPlaying;
   final bool isBuffering;
   final bool isLiveMode;
@@ -639,26 +786,45 @@ class _PlaybackStatusChip extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final brightness = Theme.of(context).brightness;
     final isListening = isPlaying && !isBuffering;
-    final label = isListening
-        ? (isLiveMode ? 'En direct' : 'En écoute')
-        : 'En pause';
+    // Com erro visível, não mostrar «écoute» só porque o player ainda reporta playing.
+    final effectiveListening = isListening && !hasRecoverableError;
+    final String label;
+    if (isOffline && !isBuffering) {
+      label = 'Hors ligne';
+    } else if (hasRecoverableError) {
+      label = 'Erreur';
+    } else if (isListening) {
+      label = isLiveMode ? 'En direct' : 'En écoute';
+    } else {
+      label = 'En pause';
+    }
+
+    final neutralPauseChip = label == 'En pause';
 
     final pillBg = AppTheme.statusPillBackground(
       scheme: scheme,
       brightness: brightness,
-      isListening: isListening,
+      isListening: effectiveListening,
       isLiveMode: isLiveMode,
+      neutralPause: neutralPauseChip,
     );
     final pillBorder = AppTheme.statusPillBorder(
       scheme: scheme,
       brightness: brightness,
-      isListening: isListening,
+      isListening: effectiveListening,
       isLiveMode: isLiveMode,
+      neutralPause: neutralPauseChip,
     );
 
-    final labelPaint = isListening
+    final labelPaint = effectiveListening
         ? labelColor.withValues(alpha: isDark ? 0.92 : 1)
-        : Color.lerp(labelColor, scheme.error, isDark ? 0.42 : 0.48)!;
+        : neutralPauseChip
+            ? scheme.onSurfaceVariant.withValues(alpha: isDark ? 0.92 : 0.88)
+            : Color.lerp(
+                labelColor,
+                scheme.error,
+                isDark ? 0.42 : 0.48,
+              )!;
 
     final minH = math.max(AppSpacing.minTouchTarget, AppSpacing.g(6, scale));
     return ConstrainedBox(
@@ -673,7 +839,10 @@ class _PlaybackStatusChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: pillBg,
           borderRadius: AppRadii.borderRadius(AppRadii.pill, scale),
-          border: Border.all(color: pillBorder, width: 1),
+          border: Border.all(
+            color: pillBorder,
+            width: 1,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

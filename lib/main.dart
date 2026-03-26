@@ -1,32 +1,21 @@
-import 'dart:ui' show PlatformDispatcher;
-
 import 'package:audio_session/audio_session.dart';
-import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:meu_app/app/app.dart';
-import 'package:meu_app/core/platform/android_ui_task_lifecycle.dart';
-import 'package:meu_app/features/radio/radio_stream_config.dart';
+import 'package:meu_app/core/theme/app_theme.dart';
+import 'package:meu_app/features/radio/radio_stream_config.dart'
+    show
+        kAndroidMediaSeekSkipInterval,
+        kAndroidRadioNotificationChannelDescription,
+        kAndroidRadioNotificationChannelId,
+        kAndroidRadioNotificationChannelName,
+        kAndroidMediaNotificationIcon;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-
-  FlutterError.onError = (details) {
-    FlutterError.presentError(details);
-  };
-  PlatformDispatcher.instance.onError = (error, stack) {
-    if (kDebugMode) {
-      debugPrint('Erro assíncrono não apanhado: $error\n$stack');
-    }
-    return false;
-  };
-
-  if (!kIsWeb) {
-    installAndroidUiTaskRemovedChannel();
-  }
 
   await _bootstrapAudio();
 
@@ -38,6 +27,12 @@ Future<void> main() async {
 }
 
 /// Sessão de áudio + notificação em segundo plano. Falhas não bloqueiam [runApp].
+///
+/// **Interrupções (chamada, etc.):** [AudioSessionConfiguration.music] + foco Android;
+/// [RadioPlayerUiNotifier] escuta [AudioSession.interruptionEventStream] para pausar/retomar a UI.
+///
+/// **Android (2024–2026):** o serviço usa `foregroundServiceType="mediaPlayback"` no manifest;
+/// em API 33+, [ensureAndroidPostNotificationsPermission] pede `POST_NOTIFICATIONS` após o 1.º frame.
 Future<void> _bootstrapAudio() async {
   try {
     final session = await AudioSession.instance;
@@ -58,12 +53,21 @@ Future<void> _bootstrapAudio() async {
       androidNotificationChannelId: kAndroidRadioNotificationChannelId,
       androidNotificationChannelName: kAndroidRadioNotificationChannelName,
       androidNotificationChannelDescription:
-          'Reprodução da Bible FM com controlos na notificação.',
+          kAndroidRadioNotificationChannelDescription,
+      notificationColor: AppTheme.mediaNotificationBackground,
+      androidNotificationIcon: kAndroidMediaNotificationIcon,
       androidNotificationOngoing: true,
-      // Em pausa, retira o serviço em primeiro plano (melhor para bateria e políticas Android).
-      androidStopForegroundOnPause: true,
-      androidNotificationClickStartsActivity: true,
       androidResumeOnClick: true,
+      androidNotificationClickStartsActivity: true,
+      androidStopForegroundOnPause: true,
+      androidShowNotificationBadge: false,
+      preloadArtwork: false,
+      fastForwardInterval: kAndroidMediaSeekSkipInterval,
+      rewindInterval: kAndroidMediaSeekSkipInterval,
+      androidBrowsableRootExtras: const <String, dynamic>{
+        'android.media.browse.CONTENT_STYLE_SUPPORTED': true,
+        'android.media.browse.CONTENT_STYLE_PLAYABLE_HINT': 1,
+      },
     );
   } catch (e, stack) {
     FlutterError.reportError(

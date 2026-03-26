@@ -3,7 +3,7 @@ import 'package:meu_app/core/theme/app_spacing.dart';
 import 'package:meu_app/core/theme/app_theme.dart';
 
 /// Indicador de estado: **verde** em en direct (a tocar); différé em **âmbar**;
-/// **vermelho** em pause.
+/// **vermelho** em pause com erro / hors ligne; **cinza** em pause neutro ([neutralPause]).
 /// A animação roda apenas durante reprodução (differe/en direct).
 class LivePulsingIndicator extends StatefulWidget {
   const LivePulsingIndicator({
@@ -12,6 +12,7 @@ class LivePulsingIndicator extends StatefulWidget {
     required this.isEnDirect,
     required this.isPlaying,
     required this.pulseEnabled,
+    this.neutralPause = false,
     this.onTap,
     this.tooltip,
   });
@@ -20,6 +21,8 @@ class LivePulsingIndicator extends StatefulWidget {
   final bool isEnDirect;
   final bool isPlaying;
   final bool pulseEnabled;
+  /// Alinhar ao chip «En pause» cinza (sem erreur / hors ligne).
+  final bool neutralPause;
   final VoidCallback? onTap;
 
   /// Si non null, remplace le texte d'aide au survol / long appui.
@@ -103,16 +106,21 @@ class _LivePulsingIndicatorState extends State<LivePulsingIndicator>
     final liveGreen = AppTheme.transportLivePulseColor(brightness);
     final deferredAmber = AppTheme.transportDeferredPulseColor(brightness);
     final pausedRed = AppTheme.transportPausedPulseColor(brightness);
+    final pausedNeutral = Color.lerp(
+      scheme.onSurfaceVariant,
+      scheme.outline,
+      isDark ? 0.38 : 0.28,
+    )!;
     final accent = widget.isPlaying
         ? (widget.isEnDirect ? liveGreen : deferredAmber)
-        : pausedRed;
+        : (widget.neutralPause ? pausedNeutral : pausedRed);
     final defaultTooltip = !widget.isEnDirect
         ? 'Lecture différée (pas en direct)'
         : widget.onTap == null
-        ? 'Signal du direct (fixe). Passez en direct pour l’animer.'
-        : widget.pulseEnabled
-        ? 'Appuyez pour arrêter l’animation du signal'
-        : 'Appuyez pour animer le signal du direct';
+            ? 'Signal du direct (fixe). Passez en direct pour l’animer.'
+            : widget.pulseEnabled
+                ? 'Appuyez pour arrêter l’animation du signal'
+                : 'Appuyez pour animer le signal du direct';
 
     final tooltipText = widget.tooltip ?? defaultTooltip;
 
@@ -188,7 +196,10 @@ class _LivePulsingIndicatorState extends State<LivePulsingIndicator>
 
     final minSide = AppSpacing.g(6, s);
     indicator = ConstrainedBox(
-      constraints: BoxConstraints(minWidth: minSide, minHeight: minSide),
+      constraints: BoxConstraints(
+        minWidth: minSide,
+        minHeight: minSide,
+      ),
       child: Center(child: indicator),
     );
 

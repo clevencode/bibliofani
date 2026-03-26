@@ -3,10 +3,12 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Android 13+ (API 33): notificação de média / serviço em primeiro plano visível. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <application
-        android:label="meu_app"
+        android:label="Bible FM"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
