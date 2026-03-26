@@ -21,6 +21,7 @@ class _AppThemeModeToggleState extends ConsumerState<AppThemeModeToggle>
   late final AnimationController _tapAnim;
   double? _tapFrom;
   double? _tapTo;
+
   /// Evita que o `.then` de uma animação cancelada aplique o modo errado.
   int _tapSeq = 0;
 
@@ -61,8 +62,9 @@ class _AppThemeModeToggleState extends ConsumerState<AppThemeModeToggle>
   void _animateBlendOnTap(double target) {
     final current = ref.read(themeBlendProvider);
     if ((current - target).abs() < 0.02) {
-      ref.read(appThemeModeProvider.notifier).state =
-          target < 0.5 ? ThemeMode.light : ThemeMode.dark;
+      ref.read(appThemeModeProvider.notifier).state = target < 0.5
+          ? ThemeMode.light
+          : ThemeMode.dark;
       HapticFeedback.selectionClick();
       return;
     }
@@ -79,8 +81,9 @@ class _AppThemeModeToggleState extends ConsumerState<AppThemeModeToggle>
       _tapTo = null;
       _tapFrom = null;
       ref.read(themeBlendProvider.notifier).updateDrag(t);
-      ref.read(appThemeModeProvider.notifier).state =
-          t < 0.5 ? ThemeMode.light : ThemeMode.dark;
+      ref.read(appThemeModeProvider.notifier).state = t < 0.5
+          ? ThemeMode.light
+          : ThemeMode.dark;
       ref.read(themeDragActiveProvider.notifier).state = false;
     });
     HapticFeedback.selectionClick();
@@ -104,9 +107,7 @@ class _AppThemeModeToggleState extends ConsumerState<AppThemeModeToggle>
     final thumbPadV = AppSpacing.gHalf(s) * 0.5;
 
     Color iconColor(bool selected) {
-      return selected
-          ? scheme.onSurface
-          : scheme.onSurfaceVariant;
+      return selected ? scheme.onSurface : scheme.onSurfaceVariant;
     }
 
     // Mesma lógica claro/escuro: trilho + polegar com contorno, plano (sem sombra).
@@ -139,8 +140,9 @@ class _AppThemeModeToggleState extends ConsumerState<AppThemeModeToggle>
                   final thumbH = innerH - (thumbPadV * 2);
                   final thumbTravel = innerW / 2;
                   final thumbLeft = thumbPadH + blend * thumbTravel;
-                  final thumbRadius =
-                      BorderRadius.circular((thumbH / 2).clamp(4.0, 999));
+                  final thumbRadius = BorderRadius.circular(
+                    (thumbH / 2).clamp(4.0, 999),
+                  );
 
                   return SizedBox(
                     width: innerW,
@@ -152,13 +154,16 @@ class _AppThemeModeToggleState extends ConsumerState<AppThemeModeToggle>
                         notifier.beginDrag();
                       },
                       onHorizontalDragUpdate: (details) {
-                        final t =
-                            (details.localPosition.dx / innerW).clamp(0.0, 1.0);
+                        final t = (details.localPosition.dx / innerW).clamp(
+                          0.0,
+                          1.0,
+                        );
                         notifier.updateDrag(t);
                       },
                       onHorizontalDragEnd: (details) {
                         notifier.endDrag(
-                          horizontalVelocityPx: details.velocity.pixelsPerSecond.dx,
+                          horizontalVelocityPx:
+                              details.velocity.pixelsPerSecond.dx,
                         );
                         HapticFeedback.selectionClick();
                       },

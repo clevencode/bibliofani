@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:meu_app/core/theme/app_spacing.dart';
 import 'package:meu_app/core/theme/app_theme.dart';
 
-/// Botao principal de reproducao sem container.
+/// Botão principal de reprodução (play / pausa / ligar) sem container extra.
 class PlayButton extends StatefulWidget {
   const PlayButton({
     super.key,
@@ -11,6 +11,7 @@ class PlayButton extends StatefulWidget {
     required this.onTap,
     this.size = 96,
     this.enabled = true,
+    this.showStoppedWhenIdle = false,
     this.layoutScale,
   });
 
@@ -18,6 +19,10 @@ class PlayButton extends StatefulWidget {
   final bool isLoading;
   final VoidCallback? onTap;
   final double size;
+
+  /// Quando não há reprodução mas o stream está **parado por erro** (rede, servidor…),
+  /// mostra o mesmo ícone **pausa** que durante a reprodução — paridade visual com o estado online.
+  final bool showStoppedWhenIdle;
 
   /// Quando false, o toque é ignorado (ex.: operação bloqueada por outra camada).
   final bool enabled;
@@ -34,9 +39,10 @@ class _PlayButtonState extends State<PlayButton> {
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
     final isDark = brightness == Brightness.dark;
-    // Variante rounded: cantos do play/pause mais suaves.
+    final usePauseGlyph =
+        widget.isPlaying || (widget.showStoppedWhenIdle && !widget.isLoading);
     final iconData =
-        widget.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded;
+        usePauseGlyph ? Icons.pause_rounded : Icons.play_arrow_rounded;
     final ls = widget.layoutScale ?? 1.0;
     final buttonSize = widget.size.clamp(
       AppSpacing.g(AppSpacing.playControlDiameterMinSteps, ls),
@@ -59,14 +65,17 @@ class _PlayButtonState extends State<PlayButton> {
     final String a11yLabel;
     final String tooltipMsg;
     if (widget.isLoading) {
-      a11yLabel = 'Connexion au flux en cours';
-      tooltipMsg = 'Connexion au flux…';
+      a11yLabel = 'A ligar ao stream';
+      tooltipMsg = 'A ligar…';
     } else if (widget.isPlaying) {
-      a11yLabel = 'Mettre en pause la lecture';
-      tooltipMsg = 'Pause';
+      a11yLabel = 'Pausar a escuta';
+      tooltipMsg = 'Pausar';
+    } else if (widget.showStoppedWhenIdle) {
+      a11yLabel = 'Tentar ligar de novo ao stream';
+      tooltipMsg = 'Tentar de novo';
     } else {
-      a11yLabel = 'Lancer la lecture';
-      tooltipMsg = 'Lecture';
+      a11yLabel = 'Iniciar reprodução';
+      tooltipMsg = 'Tocar';
     }
 
     return Semantics(
@@ -84,7 +93,7 @@ class _PlayButtonState extends State<PlayButton> {
           splashColor: isDark
               ? Colors.black.withValues(alpha: 0.1)
               : Colors.white.withValues(alpha: 0.18),
-          // Mantém o toque em buffering: o loading é só visual no botão.
+          // Em ligação: o toque cancela e repõe idle (equivale a parar o arranque).
           onTap: canTap ? widget.onTap : null,
           child: AnimatedOpacity(
             duration: const Duration(milliseconds: 180),

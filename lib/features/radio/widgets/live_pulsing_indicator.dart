@@ -103,17 +103,16 @@ class _LivePulsingIndicatorState extends State<LivePulsingIndicator>
     final liveGreen = AppTheme.transportLivePulseColor(brightness);
     final deferredAmber = AppTheme.transportDeferredPulseColor(brightness);
     final pausedRed = AppTheme.transportPausedPulseColor(brightness);
-    final accent =
-        widget.isPlaying
-            ? (widget.isEnDirect ? liveGreen : deferredAmber)
-            : pausedRed;
+    final accent = widget.isPlaying
+        ? (widget.isEnDirect ? liveGreen : deferredAmber)
+        : pausedRed;
     final defaultTooltip = !widget.isEnDirect
         ? 'Lecture différée (pas en direct)'
         : widget.onTap == null
-            ? 'Signal du direct (fixe). Passez en direct pour l’animer.'
-            : widget.pulseEnabled
-                ? 'Appuyez pour arrêter l’animation du signal'
-                : 'Appuyez pour animer le signal du direct';
+        ? 'Signal du direct (fixe). Passez en direct pour l’animer.'
+        : widget.pulseEnabled
+        ? 'Appuyez pour arrêter l’animation du signal'
+        : 'Appuyez pour animer le signal du direct';
 
     final tooltipText = widget.tooltip ?? defaultTooltip;
 
@@ -189,10 +188,7 @@ class _LivePulsingIndicatorState extends State<LivePulsingIndicator>
 
     final minSide = AppSpacing.g(6, s);
     indicator = ConstrainedBox(
-      constraints: BoxConstraints(
-        minWidth: minSide,
-        minHeight: minSide,
-      ),
+      constraints: BoxConstraints(minWidth: minSide, minHeight: minSide),
       child: Center(child: indicator),
     );
 

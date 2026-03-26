@@ -38,6 +38,7 @@ dependencies:
   audio_session: ^0.2.3
   just_audio: ^0.10.5
   just_audio_background: ^0.0.1-beta.17
+  connectivity_plus: ^7.0.0
 
 dev_dependencies:
   flutter_test:

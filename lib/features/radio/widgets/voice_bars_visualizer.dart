@@ -5,7 +5,7 @@ import 'package:meu_app/core/theme/app_spacing.dart';
 import 'package:meu_app/core/theme/app_theme.dart';
 
 /// Cinco barras verticais em cápsula (equalizador), alinhadas ao eixo central.
-/// Anima quando [isActive] (reprodução efectiva, sem buffering).
+/// Anima quando [isActive] (reprodução efectiva, fora da fase de ligação/buffer).
 class VoiceBarsVisualizer extends StatefulWidget {
   const VoiceBarsVisualizer({
     super.key,

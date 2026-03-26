@@ -55,19 +55,21 @@ class LiveModeButton extends StatelessWidget {
     final canTap = onPressed != null;
     String semanticsLabel;
     String tooltipMsg;
-    if (isLiveMode && isPaused && canTap) {
-      semanticsLabel = 'Rattraper le direct par paliers';
+    if (!canTap) {
+      semanticsLabel = 'Directo: inicia ou retoma a escuta primeiro';
       tooltipMsg =
-          'Rapprocher le compteur du direct sans remettre à zéro (répéter après pause)';
-    } else if (isLiveMode && !isPaused) {
-      semanticsLabel = 'Direct actif';
-      tooltipMsg = 'Direct actif';
-    } else if (!canTap) {
-      semanticsLabel = 'Direct : mettre la lecture en pause pour activer';
-      tooltipMsg = 'Mettre la lecture en pause pour activer l’écoute du direct';
+          'Com a rádio em pausa ou parada, usa o botão play antes do live';
+    } else if (isPaused) {
+      semanticsLabel = 'Ir ao directo: retoma e renova a ligação ao stream';
+      tooltipMsg =
+          'Retoma a reprodução ligando de novo ao instante em directo';
+    } else if (isLiveMode) {
+      semanticsLabel = 'Afinar alinhamento com o directo';
+      tooltipMsg =
+          'Toca outra vez para aproximar o contador do instante em antena';
     } else {
-      semanticsLabel = 'Passer en écoute du direct';
-      tooltipMsg = 'Écouter le direct';
+      semanticsLabel = 'Ir ao instante em directo';
+      tooltipMsg = 'Liga de novo ao stream em directo e activa o modo directo';
     }
 
     final radius = size / 2;
