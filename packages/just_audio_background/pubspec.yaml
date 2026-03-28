@@ -1,0 +1,25 @@
+name: just_audio_background
+description: >
+  Fork local do just_audio_background (0.0.1-beta.17) com botão «Direto» na
+  notificação de média; o resto segue o pacote original.
+publish_to: 'none'
+version: 0.0.1-beta.17+biblefm.1
+
+dependencies:
+  just_audio_platform_interface: ^4.5.0
+  audio_service: ^0.18.18
+  audio_session: ">=0.1.24 <0.3.0"
+  flutter:
+    sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+  meta: ^1.3.0
+  rxdart: '>=0.26.0 <0.29.0'
+  synchronized: ^3.3.0+3
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+
+environment:
+  sdk: ^3.11.1
+  flutter: ">=3.27.0"

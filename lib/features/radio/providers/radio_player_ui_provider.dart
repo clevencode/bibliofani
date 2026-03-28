@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meu_app/core/platform/android_post_notifications.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:meu_app/core/network/network_connectivity_provider.dart';
@@ -14,7 +15,6 @@ import 'package:meu_app/features/radio/screens/player_ui_models.dart';
 class RadioPlayerUiState {
   const RadioPlayerUiState({
     required this.lifecycle,
-    required this.elapsed,
     required this.isLiveMode,
     required this.livePulseActive,
     required this.liveSyncEligible,
@@ -23,7 +23,6 @@ class RadioPlayerUiState {
 
   factory RadioPlayerUiState.initial() => const RadioPlayerUiState(
         lifecycle: UiPlaybackLifecycle.idle,
-        elapsed: Duration.zero,
         isLiveMode: false,
         livePulseActive: false,
         liveSyncEligible: true,
@@ -31,7 +30,6 @@ class RadioPlayerUiState {
       );
 
   final UiPlaybackLifecycle lifecycle;
-  final Duration elapsed;
   final bool isLiveMode;
   final bool livePulseActive;
   /// Após uma pausa, permite alinhar o contador ao direct; consome-se ao tocar em live até nova pausa.
@@ -61,7 +59,6 @@ class RadioPlayerUiState {
 
   RadioPlayerUiState copyWith({
     UiPlaybackLifecycle? lifecycle,
-    Duration? elapsed,
     bool? isLiveMode,
     bool? livePulseActive,
     bool? liveSyncEligible,
@@ -69,7 +66,6 @@ class RadioPlayerUiState {
   }) {
     return RadioPlayerUiState(
       lifecycle: lifecycle ?? this.lifecycle,
-      elapsed: elapsed ?? this.elapsed,
       isLiveMode: isLiveMode ?? this.isLiveMode,
       livePulseActive: livePulseActive ?? this.livePulseActive,
       liveSyncEligible: liveSyncEligible ?? this.liveSyncEligible,
@@ -101,8 +97,8 @@ final radioPlayerUiProvider =
 /// **Responsabilidades (botões / entradas públicas):**
 /// - [transportTap] — só o controlo **play/pause** e anular carregamento em buffer;
 ///   não activa «en direct».
-/// - [liveTap] — só o botão **live**: modo direct, contador de *catch-up* e nova
-///   ligação ao fluxo (borda ao vivo).
+/// - [liveTap] — só o botão **live** (e «Direto» na notificação Android via
+///   [BibleFmMediaNotificationLiveBridge]): modo direct, *catch-up* e nova ligação ao fluxo.
 /// - [retryAfterError], [retryErrorBanner], [recoverPlaybackSoft], [pauseDueToNetworkLoss],
 ///   [onConnectivityRestored] — reacções de sistema / rede, não são botões de transporte.
 /// - Interrupções de áudio ([AudioSession.interruptionEventStream]): chamada,
@@ -114,6 +110,7 @@ final radioPlayerUiProvider =
 /// que faz [stop], invalida a fonte em cache e volta a [idle].
 class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
   RadioPlayerUiNotifier(this._ref) : super(RadioPlayerUiState.initial()) {
+    BibleFmMediaNotificationLiveBridge.register(this, liveTap);
     _player = AudioPlayer();
     _playerStateSub = _player.playerStateStream.listen(
       _onPlayerState,
@@ -165,6 +162,9 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
   bool _pausedForAudioInterruption = false;
 
   Timer? _elapsedTicker;
+  /// «Catch-up» para o direct (lógica de [liveTap]); **não** vai para o estado
+  /// Riverpod para evitar rebuild da página a cada segundo.
+  Duration _liveCatchUpElapsed = Duration.zero;
   bool _sourceLoaded = false;
   /// Evita que o stream reconcile `idle` antes de `setAudioSource` avançar (race com «preparing»).
   bool _deferPlayerIdle = false;
@@ -173,6 +173,11 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
 
   /// Perda de rede durante reprodução ou carregamento: ao voltar online, retoma sozinha.
   bool _shouldAutoResumeWhenOnline = false;
+
+  bool _disposed = false;
+
+  /// Evita `updateMediaItem` redundante na sessão de média (menos trabalho no SO).
+  String? _lastPushedNotificationSignature;
 
   /// Avança o contador em direcção ao instante mais recente, em [chunk]s,
   /// sem [Duration.zero] imposto por um único toque.
@@ -190,6 +195,8 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
 
   @override
   void dispose() {
+    _disposed = true;
+    BibleFmMediaNotificationLiveBridge.unregister(this);
     _elapsedTicker?.cancel();
     unawaited(_interruptionSub?.cancel() ?? Future<void>.value());
     unawaited(_playerStateSub?.cancel() ?? Future<void>.value());
@@ -200,6 +207,73 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
   void _emit(RadioPlayerUiState next) {
     state = next;
     _syncElapsedTicker();
+    _syncNotificationMediaItemIfLoaded();
+  }
+
+  MediaItem _notificationMediaItem(RadioPlayerUiState s) {
+    final line = bibleFmMediaNotificationStatusLine(
+      lifecycle: s.lifecycle,
+      isLiveMode: s.isLiveMode,
+    );
+    return MediaItem(
+      id: kBibleFmMediaItemId,
+      title: kBibleFmNotificationTitle,
+      album: kBibleFmNotificationAlbum,
+      displayTitle: kBibleFmNotificationTitle,
+      artist: line,
+      displaySubtitle: line,
+      displayDescription: kBibleFmNotificationDescription,
+      genre: kBibleFmMediaGenre,
+      duration: null,
+      playable: true,
+      // Badge «live» / hint de stream ao vivo: só quando a UI está em «en direct».
+      isLive: s.isEnDirect,
+    );
+  }
+
+  /// Assinatura estável do que a notificação mostra (evita pushes duplicados).
+  String _notificationMetadataSignature(RadioPlayerUiState s) =>
+      '${s.lifecycle.index}|${s.isLiveMode}|${s.isEnDirect}';
+
+  void _invalidateNotificationMetadataSignature() {
+    _lastPushedNotificationSignature = null;
+  }
+
+  void _markSourceUnloaded() {
+    _sourceLoaded = false;
+    _invalidateNotificationMetadataSignature();
+  }
+
+  void _syncNotificationMediaItemIfLoaded() {
+    if (!_sourceLoaded || _disposed) return;
+    final sig = _notificationMetadataSignature(state);
+    if (sig == _lastPushedNotificationSignature) return;
+    unawaited(_pushNotificationMediaItemToPlatform(sig));
+  }
+
+  Future<void> _pushNotificationMediaItemToPlatform(String expectedSignature) async {
+    final snapshot = state;
+    if (_disposed || !_sourceLoaded) return;
+    if (_notificationMetadataSignature(snapshot) != expectedSignature) return;
+    try {
+      await JustAudioBackground.updateNowPlayingMediaItem(
+        _notificationMediaItem(snapshot),
+      );
+      if (_disposed) return;
+      if (_notificationMetadataSignature(state) != expectedSignature) return;
+      _lastPushedNotificationSignature = expectedSignature;
+    } catch (e, stack) {
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: e,
+          stack: stack,
+          library: 'radio_player_ui_provider',
+          context: ErrorDescription(
+            'Falha ao actualizar metadados na notificação de média',
+          ),
+        ),
+      );
+    }
   }
 
   /// Apresentação **écoute** (sem «en direct»): só altera flags de UI do modo live.
@@ -224,7 +298,7 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
         debugPrint('_cancelActiveTransportLoad stop: $e\n$stack');
       }
     }
-    _sourceLoaded = false;
+    _markSourceUnloaded();
     _emit(
       _ecouteLivePresentation(state).copyWith(
         lifecycle: UiPlaybackLifecycle.idle,
@@ -350,6 +424,7 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
     if (nextLifecycle != state.lifecycle) {
       state = state.copyWith(lifecycle: nextLifecycle);
       _syncElapsedTicker();
+      _syncNotificationMediaItemIfLoaded();
     }
   }
 
@@ -365,9 +440,8 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
   void _startElapsedTicker() {
     _elapsedTicker?.cancel();
     _elapsedTicker = Timer.periodic(const Duration(seconds: 1), (_) {
-      final s = state;
-      if (!s.shouldRunElapsedTicker) return;
-      state = s.copyWith(elapsed: s.elapsed + const Duration(seconds: 1));
+      if (!state.shouldRunElapsedTicker) return;
+      _liveCatchUpElapsed += const Duration(seconds: 1);
     });
   }
 
@@ -378,15 +452,14 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
 
   /// Só [liveTap]: contador + `isLiveMode`; limpa erro obsoleto (escopo do botão live).
   void _activateLiveModeUi({required bool consumeLiveSync}) {
-    final nextElapsed = _elapsedAfterLiveTap(
-      state.elapsed,
+    _liveCatchUpElapsed = _elapsedAfterLiveTap(
+      _liveCatchUpElapsed,
       consumeSync: consumeLiveSync,
     );
     _emit(
       state.copyWith(
         isLiveMode: true,
         errorMessage: null,
-        elapsed: nextElapsed,
         liveSyncEligible: false,
       ),
     );
@@ -403,15 +476,7 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
     }
     return AudioSource.uri(
       uri,
-      tag: MediaItem(
-        id: kBibleFmMediaItemId,
-        title: kBibleFmNotificationTitle,
-        displayTitle: kBibleFmNotificationTitle,
-        artist: kBibleFmNotificationArtist,
-        displayDescription: kBibleFmNotificationDescription,
-        genre: kBibleFmMediaGenre,
-        isLive: true,
-      ),
+      tag: _notificationMediaItem(state),
     );
   }
 
@@ -420,6 +485,8 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
     try {
       await _player.setAudioSource(_liveSource(bustCache: false));
       _sourceLoaded = true;
+      _invalidateNotificationMetadataSignature();
+      _syncNotificationMediaItemIfLoaded();
     } catch (e, stack) {
       if (kDebugMode) {
         debugPrint('RadioPlayerUiNotifier: setAudioSource failed: $e\n$stack');
@@ -504,7 +571,7 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
             debugPrint('pauseDueToNetworkLoss stop: $e\n$stack');
           }
         }
-        _sourceLoaded = false;
+        _markSourceUnloaded();
         _deferPlayerIdle = false;
         _emit(
           _ecouteLivePresentation(state).copyWith(
@@ -614,6 +681,12 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
     }
   }
 
+  Future<void> _ensureAndroidNotificationsBeforePlayback() async {
+    if (kIsWeb) return;
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    await ensureAndroidPostNotificationsPermission();
+  }
+
   /// Botão **play/pause** (e cancelar buffer): transporte de leitura apenas.
   Future<void> transportTap() async {
     if (state.errorMessage != null) {
@@ -651,6 +724,7 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
 
       case UiPlaybackLifecycle.paused:
         _pausedForAudioInterruption = false;
+        await _ensureAndroidNotificationsBeforePlayback();
         try {
           await _player.play();
         } catch (e, stack) {
@@ -660,11 +734,12 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
         return;
 
       case UiPlaybackLifecycle.idle:
+        await _ensureAndroidNotificationsBeforePlayback();
         _deferPlayerIdle = true;
+        _liveCatchUpElapsed = Duration.zero;
         _emit(
           state.copyWith(
             lifecycle: UiPlaybackLifecycle.preparing,
-            elapsed: Duration.zero,
             liveSyncEligible: true,
             isLiveMode: false,
             livePulseActive: false,
@@ -679,7 +754,7 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
             debugPrint('Radio start failed: $e\n$stack');
           }
           _deferPlayerIdle = false;
-          _sourceLoaded = false;
+          _markSourceUnloaded();
           _emit(
             _ecouteLivePresentation(state).copyWith(
               lifecycle: UiPlaybackLifecycle.idle,
@@ -714,6 +789,9 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
       }
       await _player.setAudioSource(_liveSource(bustCache: true));
       _sourceLoaded = true;
+      _invalidateNotificationMetadataSignature();
+      _syncNotificationMediaItemIfLoaded();
+      await _ensureAndroidNotificationsBeforePlayback();
       await _player.play();
     } catch (e, stack) {
       if (kDebugMode) {
@@ -721,7 +799,7 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
       }
       _pausedForAudioInterruption = false;
       _deferPlayerIdle = false;
-      _sourceLoaded = false;
+      _markSourceUnloaded();
       _emit(
         _ecouteLivePresentation(state).copyWith(
           lifecycle: UiPlaybackLifecycle.idle,
@@ -734,7 +812,7 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
   }
 
   void resetElapsed() {
-    _emit(state.copyWith(elapsed: Duration.zero));
+    _liveCatchUpElapsed = Duration.zero;
   }
 
   void retryAfterError() {
@@ -748,7 +826,8 @@ class RadioPlayerUiNotifier extends StateNotifier<RadioPlayerUiState> {
     } catch (_) {}
     _pausedForAudioInterruption = false;
     _deferPlayerIdle = false;
-    _sourceLoaded = false;
+    _markSourceUnloaded();
+    _liveCatchUpElapsed = Duration.zero;
     _emit(
       state.copyWith(
         errorMessage: null,

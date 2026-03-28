@@ -31,6 +31,9 @@ abstract final class AppTheme {
   /// `audio_service`: contraste com ícone branco monocromático e barra de acções).
   static const Color mediaNotificationBackground = Color(0xFF1565A0);
 
+  /// Fundo principal da app em modo escuro (corpo / scaffold).
+  static const Color darkAppBackground = Color(0xFF171717);
+
   /// Fundo claro: cinzento quente tipo sidebar + página (sem gradiente forte).
   static const LinearGradient notionLightBackgroundGradient = LinearGradient(
     begin: Alignment.topCenter,
@@ -56,14 +59,14 @@ abstract final class AppTheme {
 
     if (isDark) {
       return base.copyWith(
-        surface: const Color(0xFF191919),
+        surface: darkAppBackground,
         onSurface: const Color(0xFFE6E6E4),
         onSurfaceVariant: const Color(0xFF9B9B9B),
-        surfaceContainerLowest: const Color(0xFF141414),
-        surfaceContainerLow: const Color(0xFF1F1F1F),
-        surfaceContainer: const Color(0xFF252525),
+        surfaceContainerLowest: const Color(0xFF121212),
+        surfaceContainerLow: const Color(0xFF1C1C1C),
+        surfaceContainer: const Color(0xFF242424),
         surfaceContainerHigh: const Color(0xFF2A2A2A),
-        surfaceContainerHighest: const Color(0xFF2F2F2F),
+        surfaceContainerHighest: const Color(0xFF303030),
         outline: const Color(0xFF373737),
         outlineVariant: const Color(0xFF2C2C2C),
         primary: _notionBlueDark,
@@ -71,7 +74,7 @@ abstract final class AppTheme {
         primaryContainer: const Color(0xFF1E3A4C),
         onPrimaryContainer: const Color(0xFFC2E5FF),
         secondary: const Color(0xFF9B9B9B),
-        onSecondary: const Color(0xFF191919),
+        onSecondary: darkAppBackground,
         error: const Color(0xFFFF8B7B),
         onError: const Color(0xFF370000),
         errorContainer: const Color(0xFF6B2A2A),

@@ -1,9 +1,11 @@
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:meu_app/app/app.dart';
+import 'package:meu_app/app/opening_splash_gate.dart';
 import 'package:meu_app/core/theme/app_theme.dart';
 import 'package:meu_app/features/radio/radio_stream_config.dart'
     show
@@ -14,14 +16,23 @@ import 'package:meu_app/features/radio/radio_stream_config.dart'
         kAndroidMediaNotificationIcon;
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  // Mantém a splash nativa (mesmo fundo/logo) até o Flutter poder pintar o ecrã
+  // equivalente — evita flash branco e duplo salto visual.
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
-  await _bootstrapAudio();
+  final bootstrapFuture = _bootstrapAudio();
+  final openingFuture = Future.wait<void>(<Future<void>>[
+    bootstrapFuture,
+    Future<void>.delayed(const Duration(milliseconds: 280)),
+  ]);
 
   runApp(
-    const ProviderScope(
-      child: RadioApp(),
+    ProviderScope(
+      child: RadioApp(
+        home: OpeningSplashGate(initFuture: openingFuture),
+      ),
     ),
   );
 }
@@ -31,8 +42,9 @@ Future<void> main() async {
 /// **Interrupções (chamada, etc.):** [AudioSessionConfiguration.music] + foco Android;
 /// [RadioPlayerUiNotifier] escuta [AudioSession.interruptionEventStream] para pausar/retomar a UI.
 ///
-/// **Android (2024–2026):** o serviço usa `foregroundServiceType="mediaPlayback"` no manifest;
-/// em API 33+, [ensureAndroidPostNotificationsPermission] pede `POST_NOTIFICATIONS` após o 1.º frame.
+/// **Android:** `foregroundServiceType="mediaPlayback"` + `POST_NOTIFICATIONS` (API 33+).
+/// [androidStopForegroundOnPause] a `false` mantém o FGS visível em pausa (rádio — evita
+/// cortes agressivos em alguns OEMs e mantém a notificação utilizável).
 Future<void> _bootstrapAudio() async {
   try {
     final session = await AudioSession.instance;
@@ -56,12 +68,18 @@ Future<void> _bootstrapAudio() async {
           kAndroidRadioNotificationChannelDescription,
       notificationColor: AppTheme.mediaNotificationBackground,
       androidNotificationIcon: kAndroidMediaNotificationIcon,
+      // Leitura activa: o SO trata como sessão contínua (menos swipe acidental).
       androidNotificationOngoing: true,
       androidResumeOnClick: true,
       androidNotificationClickStartsActivity: true,
-      androidStopForegroundOnPause: true,
+      // Rádio: manter notificação / FGS em pausa para segundo plano e controlos fiáveis.
+      androidStopForegroundOnPause: false,
       androidShowNotificationBadge: false,
       preloadArtwork: false,
+      artDownscaleWidth: 512,
+      artDownscaleHeight: 512,
+      // O stream é em directo (sem seek na UI); estes intervalos satisfazem a API
+      // audio_service / comandos remotos sem serem expostos como controlos úteis.
       fastForwardInterval: kAndroidMediaSeekSkipInterval,
       rewindInterval: kAndroidMediaSeekSkipInterval,
       androidBrowsableRootExtras: const <String, dynamic>{

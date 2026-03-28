@@ -2,26 +2,39 @@
 const String kBibleFmLiveStreamUrl =
     'https://servidor13.brlogic.com:7156/live';
 
-/// Identificadores estáveis do canal de notificação Android (segundo plano).
+/// ID do canal de notificação de média. **Alterar** força canal novo nas definições
+/// (útil após mudanças de importância / nome). v2: alinhado a leitura em segundo plano.
 const String kAndroidRadioNotificationChannelId =
-    'com.exemplo.meu_app.channel.audio';
+    'com.exemplo.meu_app.channel.media_playback_v2';
 
-const String kAndroidRadioNotificationChannelName = 'Bible FM';
+/// Nome do canal nas definições Android (Notificações → Bible FM).
+const String kAndroidRadioNotificationChannelName = 'Bible FM — Áudio';
 
-/// Descrição do canal (definições do sistema → notificações → Bible FM).
+/// Texto de ajuda no ecrã de canais do sistema.
 const String kAndroidRadioNotificationChannelDescription =
-    'Controlos de reprodução e leitura em segundo plano.';
+    'Controlos de reprodução (play, pausa, direto) e leitura em segundo plano.';
 
 /// Identificador estável do item de média (Android Auto / histórico de sessão).
 const String kBibleFmMediaItemId = 'com.exemplo.meu_app.radio.live';
 
-/// Ícone da notificação: vector branco transparente (`res/drawable/…`), formato exigido pelo MediaStyle.
+/// Ícone **pequeno** da barra de estado: vector monocromático branco (Material / Android).
+/// Não usar o logótipo colorido aqui — o SO aplica tint e fica ilegível.
 const String kAndroidMediaNotificationIcon = 'drawable/ic_stat_audio';
 
-/// Metadados apresentados no MediaStyle (título, subtítulo, terceira linha).
+/// Metadados no MediaStyle / MediaSession (título fixo; subtítulo = estado de leitura).
+///
+/// Boas práticas: manter [kBibleFmMediaItemId] estável entre versões (histórico Auto);
+/// textos curtos para uma linha na notificação compacta.
 const String kBibleFmNotificationTitle = 'Bible FM';
-const String kBibleFmNotificationArtist = 'En direct';
 const String kBibleFmNotificationDescription = 'Rádio — transmissão contínua';
+
+/// Subtítulo dinâmico na notificação — ver [bibleFmMediaNotificationStatusLine].
+const String kBibleFmMediaNotificationLinePause = 'En pause';
+const String kBibleFmMediaNotificationLineEcoute = 'En écoute';
+const String kBibleFmMediaNotificationLineDirect = 'En direct';
+
+/// Terceira linha / agrupamento em alguns leitores de sistema (Auto, ecrã de bloqueio).
+const String kBibleFmNotificationAlbum = 'Ao vivo';
 
 /// Categoria para browsing / classificadores de sistema (radio, podcast, etc.).
 const String kBibleFmMediaGenre = 'Radio';

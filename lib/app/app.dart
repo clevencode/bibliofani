@@ -1,34 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meu_app/core/theme/app_theme.dart';
-import 'package:meu_app/core/theme/app_theme_mode_providers.dart';
-import 'package:meu_app/features/radio/screens/radio_player_page.dart';
 
-/// Raiz da app: tema, acessibilidade (escala de texto limitada), system UI e
-/// [restorationScopeId] para estado restaurável (Material 3).
-class RadioApp extends ConsumerWidget {
-  const RadioApp({super.key});
+/// Raiz da app: tema **escuro fixo**, acessibilidade (escala de texto limitada),
+/// system UI e [restorationScopeId] para estado restaurável (Material 3).
+class RadioApp extends StatelessWidget {
+  const RadioApp({
+    super.key,
+    required this.home,
+  });
+
+  final Widget home;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final blend = ref.watch(themeBlendProvider);
-    final dragging = ref.watch(themeDragActiveProvider);
-    final lerped = ThemeData.lerp(
-      AppTheme.light,
-      AppTheme.dark,
-      blend.clamp(0.0, 1.0),
-    );
+  Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Radio Bible FM',
       debugShowCheckedModeBanner: false,
       restorationScopeId: 'biblefm_app',
-      themeMode: ref.watch(appThemeModeProvider),
-      themeAnimationDuration:
-          dragging ? Duration.zero : AppTheme.themeCrossfadeDuration,
-      themeAnimationCurve: AppTheme.themeCrossfadeCurve,
-      theme: lerped,
+      themeMode: ThemeMode.dark,
+      theme: AppTheme.dark,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -71,7 +63,7 @@ class RadioApp extends ConsumerWidget {
           child: content,
         );
       },
-      home: const RadioPlayerPage(),
+      home: home,
     );
   }
 }

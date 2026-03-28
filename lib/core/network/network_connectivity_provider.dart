@@ -30,11 +30,6 @@ enum RadioNetworkLink {
 
 extension RadioNetworkLinkX on RadioNetworkLink {
   bool get isOffline => this == RadioNetworkLink.offline;
-
-  /// Indicador discreto sob o cabeçalho (Wi‑Fi, dados móveis, …).
-  bool get showsTransportHint =>
-      this != RadioNetworkLink.unknown &&
-      this != RadioNetworkLink.offline;
 }
 
 /// Estado bruto da conectividade; use [networkOfflineProvider] para só offline.
@@ -67,11 +62,26 @@ class NetworkConnectivityNotifier extends StateNotifier<RadioNetworkLink> {
   StreamSubscription<List<ConnectivityResult>>? _subscription;
 
   /// Primeira leitura da plataforma; útil antes do arranque automático do leitor.
+  /// Re-tenta com pequenos atrasos se [checkConnectivity] falhar (evita ficar em [unknown]).
   Future<void> _bootstrap() async {
-    try {
-      _apply(await _connectivity.checkConnectivity());
-    } catch (_) {
-      // Mantém o último estado se a verificação inicial falhar.
+    for (var attempt = 0; attempt < 5; attempt++) {
+      try {
+        _apply(await _connectivity.checkConnectivity());
+        return;
+      } catch (_) {
+        await Future<void>.delayed(Duration(milliseconds: 80 * (attempt + 1)));
+      }
+    }
+  }
+
+  /// Se, após [initialConnectivityFuture], o estado ainda for [unknown], volta a consultar a API.
+  Future<void> ensureKnownLink() async {
+    await initialConnectivityFuture;
+    for (var i = 0; i < 4 && state == RadioNetworkLink.unknown; i++) {
+      await Future<void>.delayed(Duration(milliseconds: 100 * (i + 1)));
+      try {
+        _apply(await _connectivity.checkConnectivity());
+      } catch (_) {}
     }
   }
 

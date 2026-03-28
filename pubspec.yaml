@@ -39,8 +39,11 @@ dependencies:
   flutter_riverpod: ^2.5.1
   audio_session: ^0.2.3
   just_audio: ^0.10.5
-  just_audio_background: ^0.0.1-beta.17
+  just_audio_background:
+    path: packages/just_audio_background
   restart_app: ^1.7.3
+  # Runtime: preserve/remove da splash nativa até o 1.º frame Flutter estar pronto.
+  flutter_native_splash: ^2.4.5
 
 dev_dependencies:
   flutter_test:
@@ -52,6 +55,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -63,6 +67,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/splash_logo.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -89,3 +96,26 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Ícone da app (Android / Web) = mesmo PNG do logótipo oficial.
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/splash_logo.png
+  adaptive_icon_background: "#171717"
+  adaptive_icon_foreground: assets/splash_logo.png
+  web:
+    generate: true
+    image_path: assets/splash_logo.png
+    background_color: "#171717"
+
+# Splash nativa (#171717 + logo) até ao primeiro frame; iOS omitido.
+flutter_native_splash:
+  color: "#171717"
+  image: assets/splash_logo.png
+  android: true
+  android_12:
+    color: "#171717"
+    image: assets/splash_logo.png
+  web: true
+  ios: false

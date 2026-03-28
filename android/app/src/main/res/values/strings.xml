@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 14+: descrição visível nas definições do serviço em primeiro plano (mediaPlayback). -->
+    <string name="audio_service_fgs_description">Reprodução de áudio Bible FM em segundo plano</string>
+</resources>
