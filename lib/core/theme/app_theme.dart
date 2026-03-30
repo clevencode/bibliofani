@@ -322,25 +322,28 @@ abstract final class AppTheme {
       brightness == Brightness.light ? Colors.white : _notionInk;
 
   static Color transportLiveIcon(Brightness brightness) =>
-      brightness == Brightness.light ? _notionInk : const Color(0xFFE6E6E4);
+      transportChromeOnInner(brightness);
 
-  /// Disco do botão **live** — branco com sopro de sálvia em dark; em light o par Notion original.
+  /// Disco **live**: mesmo preenchimento que a cápsula interior estilo Chrome ([transportChromeInnerFill]).
   static Color liveStreamDiscFill(Brightness brightness) =>
-      brightness == Brightness.dark
-          ? const Color(0xFFF7F9F6)
-          : transportPlayFill(brightness);
+      transportChromeInnerFill(brightness);
 
-  /// Ícone «ondas» no disco live — tinta ardósia suave, não preto absoluto (dark).
+  /// Ícone / spinner no disco live: mesma tinta que ícones na barra Chrome ([transportChromeOnInner]).
   static Color liveStreamBroadcastIconColor(Brightness brightness) =>
-      brightness == Brightness.dark
-          ? const Color(0xFF3D4A42)
-          : transportPlayIcon(brightness);
+      transportChromeOnInner(brightness);
 
-  /// Contorno fino do disco live sobre o trilho de transporte.
+  /// Anel do disco — combina com o trilho do slider Chrome, sobre o [transportCapsuleTrack].
   static Color liveStreamDiscRing(Brightness brightness) =>
-      brightness == Brightness.dark
-          ? const Color(0x5990A088)
-          : const Color(0x3324221E);
+      transportChromeTimelineTrack(brightness).withValues(
+        alpha: brightness == Brightness.dark ? 0.75 : 0.55,
+      );
+
+  /// Hover / splash do botão live (coerente com [transportChromeOnInner]).
+  static Color liveStreamButtonHover(Brightness brightness) =>
+      transportChromeOnInner(brightness).withValues(alpha: 0.07);
+
+  static Color liveStreamButtonSplash(Brightness brightness) =>
+      transportChromeOnInner(brightness).withValues(alpha: 0.12);
 
   /// Traço fino tipo callout Notion sobre fundo claro (#E3E2E0) / contorno painel escuro.
   static Color transportLiveBorder(Brightness brightness) =>

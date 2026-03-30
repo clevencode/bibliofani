@@ -297,7 +297,6 @@ class _WebLiveStreamButton extends StatelessWidget {
         final reloading = bibleFmWebLiveReloading.value;
         final atLiveEdge = bibleFmWebLiveEdgeActive.value;
         final canTap = !reloading && !(playing && atLiveEdge);
-        final isDark = Theme.of(context).brightness == Brightness.dark;
 
         String semanticsLabel;
         String tooltipMsg;
@@ -323,14 +322,10 @@ class _WebLiveStreamButton extends StatelessWidget {
               : null,
           customBorder: const CircleBorder(),
           hoverColor: canTap
-              ? (isDark
-                  ? Colors.black.withValues(alpha: 0.06)
-                  : Colors.white.withValues(alpha: 0.12))
+              ? AppTheme.liveStreamButtonHover(brightness)
               : Colors.transparent,
           splashColor: canTap
-              ? (isDark
-                  ? Colors.black.withValues(alpha: 0.1)
-                  : Colors.white.withValues(alpha: 0.18))
+              ? AppTheme.liveStreamButtonSplash(brightness)
               : Colors.transparent,
           highlightColor: canTap ? null : Colors.transparent,
           child: Ink(
