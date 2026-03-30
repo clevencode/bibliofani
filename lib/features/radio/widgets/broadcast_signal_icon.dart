@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Ícone **live / rádio** para o botão «live»: [Icons.podcasts_rounded] —
-/// ondas de emissão (Material), distinto de Wi‑Fi ou TV.
+/// Ícone **live** para o botão «live»: [Icons.sensors] (Material / Google).
 class BroadcastSignalIcon extends StatelessWidget {
   const BroadcastSignalIcon({
     super.key,
@@ -17,7 +16,7 @@ class BroadcastSignalIcon extends StatelessWidget {
     return Semantics(
       excludeSemantics: true,
       child: Icon(
-        Icons.podcasts_rounded,
+        Icons.sensors,
         size: size,
         color: color,
       ),

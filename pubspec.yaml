@@ -1,5 +1,5 @@
 name: meu_app
-description: "A new Flutter project."
+description: "Bible FM — aplicação Flutter apenas Web (GitHub Pages)."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -30,20 +30,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_localizations:
-    sdk: flutter
-
-  google_fonts: ^8.0.2
-  connectivity_plus: ^6.1.4
-  permission_handler: ^11.4.0
-  flutter_riverpod: ^2.5.1
-  audio_session: ^0.2.3
-  just_audio: ^0.10.5
-  just_audio_background:
-    path: packages/just_audio_background
-  restart_app: ^1.7.3
-  # Runtime: preserve/remove da splash nativa até o 1.º frame Flutter estar pronto.
-  flutter_native_splash: ^2.4.5
 
 dev_dependencies:
   flutter_test:
@@ -97,26 +83,12 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-# Ícone da app (Android / Web) = mesmo PNG do logótipo oficial.
+# Favicon / ícone PWA (só Web).
 flutter_launcher_icons:
-  android: true
+  android: false
   ios: false
   image_path: assets/splash_logo.png
-  adaptive_icon_background: "#171717"
-  adaptive_icon_foreground: assets/splash_logo.png
   web:
     generate: true
     image_path: assets/splash_logo.png
     background_color: "#171717"
-
-# Splash nativa (#171717 + logo) até ao primeiro frame; iOS omitido.
-# Web: sem splash gerada — [web/index.html] só fundo sólido até ao 1.º frame Flutter.
-flutter_native_splash:
-  color: "#171717"
-  image: assets/splash_logo.png
-  android: true
-  android_12:
-    color: "#171717"
-    image: assets/splash_logo.png
-  web: false
-  ios: false

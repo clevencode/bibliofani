@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:meu_app/core/theme/app_spacing.dart';
 
 /// Tema **claro e escuro** inspirado no **Notion**: texto «#37352F», páginas
 /// quentes claras, azul de link, cantos subtis, bordas em vez de sombras.
-/// Tipografia **Inter** (a app Notion usa equivalente).
+/// Tipografia do Material 3 (sem carregar fontes de rede na web).
 ///
 /// [AppSpacing] mantém a grelha 8pt.
 abstract final class AppTheme {
@@ -26,10 +25,6 @@ abstract final class AppTheme {
   static const Color _notionBlue = Color(0xFF2383E2);
   static const Color _notionBlueDark = Color(0xFF529CCA);
   static const Color _notionRed = Color(0xFFEB5757);
-
-  /// Fundo **opaco** da notificação MediaStyle no Android (recomendado pelo
-  /// `audio_service`: contraste com ícone branco monocromático e barra de acções).
-  static const Color mediaNotificationBackground = Color(0xFF1565A0);
 
   /// Fundo principal da app em modo escuro (corpo / scaffold).
   /// Web: alinhado ao fundo preto do `<body>` (#000000).
@@ -126,8 +121,7 @@ abstract final class AppTheme {
       borderRadius: BorderRadius.circular(_notionCornerRadius),
     );
 
-    final rawTextTheme = _textTheme(isDark, scheme);
-    final textTheme = GoogleFonts.interTextTheme(rawTextTheme);
+    final textTheme = _textTheme(isDark, scheme);
 
     return ThemeData(
       useMaterial3: true,
@@ -147,7 +141,7 @@ abstract final class AppTheme {
         surfaceTintColor: Colors.transparent,
         iconTheme: IconThemeData(color: scheme.onSurface),
         actionsIconTheme: IconThemeData(color: scheme.onSurface),
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: TextStyle(
           color: scheme.onSurface,
           fontSize: 15,
           fontWeight: FontWeight.w600,
@@ -174,12 +168,12 @@ abstract final class AppTheme {
         backgroundColor: scheme.surfaceContainer,
         selectedColor: scheme.primary.withValues(alpha: 0.14),
         checkmarkColor: scheme.onPrimary,
-        labelStyle: GoogleFonts.inter(
+        labelStyle: TextStyle(
           color: scheme.onSurface,
           fontWeight: FontWeight.w500,
           letterSpacing: 0.1,
         ),
-        secondaryLabelStyle: GoogleFonts.inter(
+        secondaryLabelStyle: TextStyle(
           color: scheme.onSurfaceVariant,
         ),
         side: BorderSide(color: scheme.outline.withValues(alpha: 0.5)),
@@ -216,7 +210,7 @@ abstract final class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: scheme.primary,
-          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
           minimumSize: minimumTap,
           padding: EdgeInsets.symmetric(
             horizontal: AppSpacing.s2,
@@ -242,7 +236,7 @@ abstract final class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: scheme.inverseSurface,
-        contentTextStyle: GoogleFonts.inter(
+        contentTextStyle: TextStyle(
           color: scheme.onInverseSurface,
           fontSize: 14,
           fontWeight: FontWeight.w500,
@@ -258,7 +252,7 @@ abstract final class AppTheme {
         showDuration: const Duration(seconds: 4),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-        textStyle: GoogleFonts.inter(
+        textStyle: TextStyle(
           color: scheme.onInverseSurface,
           fontSize: 12,
           height: 1.35,
@@ -359,6 +353,29 @@ abstract final class AppTheme {
       brightness == Brightness.dark
           ? const Color(0xFFD6D6D4)
           : const Color(0xFF3E3E3C);
+
+  /// Cápsula interna estilo controlos do browser (Chrome / Web) sobre [transportCapsuleTrack].
+  static Color transportChromeInnerFill(Brightness brightness) =>
+      brightness == Brightness.dark
+          ? const Color(0xFFEFEFEF)
+          : const Color(0xFFE8E8E6);
+
+  /// Ícones e tempo sobre [transportChromeInnerFill].
+  static Color transportChromeOnInner(Brightness brightness) =>
+      brightness == Brightness.dark
+          ? const Color(0xFF141414)
+          : const Color(0xFF242422);
+
+  /// Trilho fino do slider (Chrome-like).
+  static Color transportChromeTimelineTrack(Brightness brightness) =>
+      brightness == Brightness.dark
+          ? const Color(0xFFCFCFCF)
+          : const Color(0xFFB0B0AC);
+
+  static Color transportChromeTimelineProgress(Brightness brightness) =>
+      brightness == Brightness.dark
+          ? const Color(0xFF9A9A9A)
+          : const Color(0xFF888884);
 
   /// Círculo do indicador de pulso em **en direct** (a reproduzir).
   static Color transportLivePulseColor(Brightness brightness) =>

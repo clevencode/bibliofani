@@ -4,7 +4,8 @@ A new Flutter project.
 
 ## Documentacao interna
 
-- Logica de stream: `docs/stream-logic.md`
+- Fluxo unificado (Web + Mobile): [`docs/fluxo-logico-reproducao-radio.md`](docs/fluxo-logico-reproducao-radio.md)
+- Detalhe Web (`<audio>`, sessão, live): [`docs/web-playback.md`](docs/web-playback.md)
 
 ## Getting Started
 
