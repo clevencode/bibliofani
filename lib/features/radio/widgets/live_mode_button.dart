@@ -13,6 +13,7 @@ class LiveModeButton extends StatelessWidget {
     required this.isLiveMode,
     required this.isPaused,
     required this.isOffline,
+    required this.isLiveReloading,
     required this.onPressed,
     required this.scale,
     required this.size,
@@ -23,6 +24,7 @@ class LiveModeButton extends StatelessWidget {
   final bool isLiveMode;
   final bool isPaused;
   final bool isOffline;
+  final bool isLiveReloading;
   final VoidCallback? onPressed;
   final double scale;
 
@@ -45,10 +47,13 @@ class LiveModeButton extends StatelessWidget {
       AppSpacing.g(5, scale),
     );
 
-    final canTap = onPressed != null;
+    final canTap = onPressed != null && !isLiveReloading;
     String semanticsLabel;
     String tooltipMsg;
-    if (isOffline) {
+    if (isLiveReloading) {
+      semanticsLabel = kBibleFmLiveA11yReloading;
+      tooltipMsg = kBibleFmLiveTooltipReloading;
+    } else if (isOffline) {
       semanticsLabel = kBibleFmLiveA11yOffline;
       tooltipMsg = kBibleFmLiveTooltipOffline;
     } else if (isTransportLoadingUiLifecycle(playbackLifecycle)) {
@@ -78,18 +83,19 @@ class LiveModeButton extends StatelessWidget {
 
     Widget circle = InkWell(
       borderRadius: BorderRadius.circular(buttonSize / 2),
-      hoverColor: !canTap
+      hoverColor: !canTap || isLiveReloading
           ? Colors.transparent
           : (isDark
               ? Colors.black.withValues(alpha: 0.06)
               : Colors.white.withValues(alpha: 0.12)),
-      splashColor: !canTap
+      splashColor: (!canTap || isLiveReloading)
           ? Colors.transparent
           : (isDark
               ? Colors.black.withValues(alpha: 0.1)
               : Colors.white.withValues(alpha: 0.18)),
-      highlightColor: !canTap ? Colors.transparent : null,
-      onTap: onPressed,
+      highlightColor:
+          (!canTap || isLiveReloading) ? Colors.transparent : null,
+      onTap: isLiveReloading ? null : onPressed,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
@@ -100,11 +106,24 @@ class LiveModeButton extends StatelessWidget {
           color: fillColor,
         ),
         alignment: Alignment.center,
-        child: BroadcastSignalIcon(color: iconColor, size: iconSize),
+        child: isLiveReloading
+            ? SizedBox(
+                width: iconSize,
+                height: iconSize,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  strokeCap: StrokeCap.round,
+                  color: iconColor,
+                  backgroundColor: iconColor.withValues(alpha: 0.22),
+                ),
+              )
+            : BroadcastSignalIcon(color: iconColor, size: iconSize),
       ),
     );
     if (isOffline) {
       circle = Opacity(opacity: 0.65, child: circle);
+    } else if (isLiveReloading) {
+      circle = Opacity(opacity: 1, child: circle);
     } else if (playbackLifecycle != UiPlaybackLifecycle.playing) {
       // Parado / a carregar: visual «não ao vivo» (opaco só durante reprodução).
       circle = Opacity(opacity: 0.45, child: circle);
@@ -121,7 +140,9 @@ class LiveModeButton extends StatelessWidget {
         message: tooltipMsg,
         waitDuration: const Duration(milliseconds: 320),
         child: MouseRegion(
-          cursor: canTap ? SystemMouseCursors.click : SystemMouseCursors.basic,
+          cursor: canTap && !isLiveReloading
+              ? SystemMouseCursors.click
+              : SystemMouseCursors.basic,
           child: circle,
         ),
       ),

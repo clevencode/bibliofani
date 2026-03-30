@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, Listenable;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -157,6 +157,7 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
   @override
   Widget build(BuildContext context) {
     if (kIsWeb) {
+      final isOffline = ref.watch(networkOfflineProvider);
       final scheme = Theme.of(context).colorScheme;
       final brightness = Theme.of(context).brightness;
       const webCapsuleH = 52.0;
@@ -222,13 +223,27 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    ValueListenableBuilder<bool>(
-                                      valueListenable: bibleFmWebPlaybackActive,
-                                      builder: (context, playing, _) {
+                                    ListenableBuilder(
+                                      listenable: Listenable.merge([
+                                        bibleFmWebPlaybackActive,
+                                        bibleFmWebLiveReloading,
+                                        bibleFmWebLiveEdgeActive,
+                                      ]),
+                                      builder: (context, _) {
+                                        final playing =
+                                            bibleFmWebPlaybackActive.value;
+                                        final reloading =
+                                            bibleFmWebLiveReloading.value;
+                                        final atLiveEdge =
+                                            bibleFmWebLiveEdgeActive.value;
+                                        final emphasiseLive = playing ||
+                                            reloading ||
+                                            (playing && atLiveEdge);
                                         return Opacity(
-                                          opacity: playing ? 1.0 : 0.45,
+                                          opacity: emphasiseLive ? 1.0 : 0.45,
                                           child: _WebLiveStreamButton(
                                             diameter: webLiveDiameter,
+                                            isOffline: isOffline,
                                           ),
                                         );
                                       },
@@ -263,6 +278,7 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
           lifecycle: s.lifecycle,
           isLiveMode: s.isLiveMode,
           livePulseActive: s.livePulseActive,
+          liveReloadInFlight: s.liveReloadInFlight,
           errorMessage: s.errorMessage,
         ),
       ),
@@ -517,6 +533,8 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                                         pageUi.lifecycle ==
                                         UiPlaybackLifecycle.preparing,
                                     isLiveMode: pageUi.isLiveMode,
+                                    isLiveReloading:
+                                        pageUi.liveReloadInFlight,
                                     onTransportTap: () =>
                                         unawaited(player.transportTap()),
                                     onLiveTap: isOffline
@@ -564,44 +582,120 @@ class _StreamLoadingStrip extends StatelessWidget {
 }
 
 /// Direto / religar fluxo — à esquerda da barra nativa (play integrado no `<audio>`).
+/// Estados alinhados ao [LiveModeButton] / TuneIn; ouve os mesmos [Listenable] que a pastilha.
 class _WebLiveStreamButton extends StatelessWidget {
-  const _WebLiveStreamButton({this.diameter = 44});
+  const _WebLiveStreamButton({
+    this.diameter = 44,
+    required this.isOffline,
+  });
 
   final double diameter;
+  final bool isOffline;
 
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
     final iconSize = (diameter * 0.42).clamp(16.0, 24.0);
-    return Semantics(
-      button: true,
-      label: kBibleFmLiveA11yGoLive,
-      child: Tooltip(
-        message: kBibleFmLiveTooltipGoLive,
-        waitDuration: const Duration(milliseconds: 320),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () =>
-                unawaited(bibleFmWebReloadLiveStream(kBibleFmLiveStreamUrl)),
-            customBorder: const CircleBorder(),
-            child: Ink(
-              width: diameter,
-              height: diameter,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.transportPlayFill(brightness),
-              ),
-              child: Center(
-                child: BroadcastSignalIcon(
-                  color: AppTheme.transportPlayIcon(brightness),
-                  size: iconSize,
-                ),
-              ),
+    final iconColor = AppTheme.transportPlayIcon(brightness);
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        bibleFmWebPlaybackActive,
+        bibleFmWebLiveReloading,
+        bibleFmWebLiveEdgeActive,
+      ]),
+      builder: (context, _) {
+        final playing = bibleFmWebPlaybackActive.value;
+        final reloading = bibleFmWebLiveReloading.value;
+        final atLiveEdge = bibleFmWebLiveEdgeActive.value;
+        final canTap = !isOffline &&
+            !reloading &&
+            !(playing && atLiveEdge);
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+
+        String semanticsLabel;
+        String tooltipMsg;
+        if (isOffline) {
+          semanticsLabel = kBibleFmLiveA11yOffline;
+          tooltipMsg = kBibleFmLiveTooltipOffline;
+        } else if (reloading) {
+          semanticsLabel = kBibleFmLiveA11yReloading;
+          tooltipMsg = kBibleFmLiveTooltipReloading;
+        } else if (playing && atLiveEdge) {
+          semanticsLabel = kBibleFmLiveA11yActive;
+          tooltipMsg = kBibleFmLiveTooltipActive;
+        } else if (canTap) {
+          semanticsLabel = kBibleFmLiveA11yGoLive;
+          tooltipMsg = kBibleFmLiveTooltipGoLive;
+        } else {
+          semanticsLabel = kBibleFmLiveA11yPauseToEnable;
+          tooltipMsg = kBibleFmLiveTooltipPauseToEnable;
+        }
+
+        Widget disc = InkWell(
+          onTap: canTap
+              ? () => unawaited(
+                    bibleFmWebReloadLiveStream(kBibleFmLiveStreamUrl),
+                  )
+              : null,
+          customBorder: const CircleBorder(),
+          hoverColor: canTap
+              ? (isDark
+                  ? Colors.black.withValues(alpha: 0.06)
+                  : Colors.white.withValues(alpha: 0.12))
+              : Colors.transparent,
+          splashColor: canTap
+              ? (isDark
+                  ? Colors.black.withValues(alpha: 0.1)
+                  : Colors.white.withValues(alpha: 0.18))
+              : Colors.transparent,
+          highlightColor: canTap ? null : Colors.transparent,
+          child: Ink(
+            width: diameter,
+            height: diameter,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppTheme.transportPlayFill(brightness),
+            ),
+            child: Center(
+              child: reloading
+                  ? SizedBox(
+                      width: iconSize,
+                      height: iconSize,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        strokeCap: StrokeCap.round,
+                        color: iconColor,
+                        backgroundColor: iconColor.withValues(alpha: 0.22),
+                      ),
+                    )
+                  : BroadcastSignalIcon(
+                      color: iconColor,
+                      size: iconSize,
+                    ),
             ),
           ),
-        ),
-      ),
+        );
+
+        if (isOffline) {
+          disc = Opacity(opacity: 0.65, child: disc);
+        }
+
+        return Semantics(
+          button: true,
+          selected: playing && atLiveEdge,
+          enabled: canTap,
+          label: semanticsLabel,
+          child: Tooltip(
+            message: tooltipMsg,
+            waitDuration: const Duration(milliseconds: 320),
+            child: MouseRegion(
+              cursor:
+                  canTap ? SystemMouseCursors.click : SystemMouseCursors.basic,
+              child: Material(color: Colors.transparent, child: disc),
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -6,6 +6,12 @@ Future<void> bibleFmWebReloadLiveStream(String baseUrl) async {}
 /// Sempre false fora da web (não usado fora do ramo [kIsWeb]).
 final bibleFmWebPlaybackActive = ValueNotifier<bool>(false);
 
+/// Fora da web não actualiza.
+final bibleFmWebLiveReloading = ValueNotifier<bool>(false);
+
+/// Fora da web não actualiza.
+final bibleFmWebLiveEdgeActive = ValueNotifier<bool>(false);
+
 /// Implementação vazia (não web). Ver `web_native_audio_web.dart`.
 class WebNativeAudioControls extends StatelessWidget {
   const WebNativeAudioControls({

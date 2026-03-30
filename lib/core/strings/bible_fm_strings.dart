@@ -61,6 +61,8 @@ const String kBibleFmLiveTooltipCatchUp =
     'Aproxima o contador do direto sem repor a zero (repetir após pausa)';
 const String kBibleFmLiveA11yGoLive = 'Ouvir em direto';
 const String kBibleFmLiveTooltipGoLive = 'Ouvir em direto';
+const String kBibleFmLiveA11yReloading = 'A religar ao direto…';
+const String kBibleFmLiveTooltipReloading = 'A ligar ao fluxo em direto…';
 const String kBibleFmLiveA11yPauseToEnable =
     'Direto: pausar a reprodução para activar';
 const String kBibleFmLiveTooltipPauseToEnable =

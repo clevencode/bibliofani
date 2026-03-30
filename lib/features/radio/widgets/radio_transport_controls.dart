@@ -21,6 +21,7 @@ class RadioTransportControls extends StatelessWidget {
     required this.isBuffering,
     required this.isPreparing,
     required this.isLiveMode,
+    required this.isLiveReloading,
     required this.onTransportTap,
     required this.onLiveTap,
     this.onOfflineRestartApp,
@@ -41,6 +42,8 @@ class RadioTransportControls extends StatelessWidget {
   /// Só [preparing] (antes de [buffering]) — texto distinto no botão play.
   final bool isPreparing;
   final bool isLiveMode;
+  /// Religar ao direto em curso — spinner no disco (TuneIn / [liveReloadInFlight]).
+  final bool isLiveReloading;
   /// Botão play/pause — só transporte ([RadioPlayerUiNotifier.transportTap]).
   final VoidCallback onTransportTap;
   /// Botão live — só modo direct ([RadioPlayerUiNotifier.liveTap]); null se indisponível.
@@ -100,6 +103,7 @@ class RadioTransportControls extends StatelessWidget {
                 isLiveMode: isLiveMode,
                 isPaused: isPaused,
                 isOffline: isOffline,
+                isLiveReloading: isLiveReloading,
                 onPressed: onLiveTap,
                 scale: scale,
                 size: playVisualSize,

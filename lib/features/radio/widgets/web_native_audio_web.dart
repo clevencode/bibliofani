@@ -12,11 +12,33 @@ html.AudioElement? _webBibleFmAudio;
 /// `true` enquanto o `<audio>` está a reproduzir (para opacidade do botão «live» na web).
 final bibleFmWebPlaybackActive = ValueNotifier<bool>(false);
 
+/// `true` durante [bibleFmWebReloadLiveStream] — spinner no botão live (padrão TuneIn).
+final bibleFmWebLiveReloading = ValueNotifier<bool>(false);
+
+/// Depois de religar ao fluxo com sucesso: sincronizado com «já em directo» (desactiva live até pausa).
+final bibleFmWebLiveEdgeActive = ValueNotifier<bool>(false);
+
 DateTime? _webPlayingSince;
 Duration _webElapsedPriorSegments = Duration.zero;
 /// Início da pausa actual (relógio de parede) — salto TuneIn ao tocar em live.
 DateTime? _webPausedSince;
 Timer? _webSessionTickTimer;
+
+/// Após [src] novo + [play], evita «seek» para o tempo de sessão (>> buffer) que **parava** o áudio no Chrome.
+DateTime? _webSkipSeekCoalesceUntil;
+
+double? _bufferedEndSec(html.AudioElement a) {
+  final b = a.buffered;
+  if (b.length == 0) return null;
+  return b.end(b.length - 1);
+}
+
+/// Limite seguro: nunca pedir `currentTime` acima do que o buffer expõe (streams ao vivo).
+double _safeTargetCurrentTimeSec(html.AudioElement a, double sessionSec) {
+  final end = _bufferedEndSec(a);
+  if (end == null) return sessionSec;
+  return sessionSec <= end ? sessionSec : end;
+}
 
 /// Expõe o tempo de sessão no **próprio** `currentTime` do `<audio controls>` (reutilização; sem segundo contador).
 void _syncNativeAudioElapsedDisplay() {
@@ -27,17 +49,33 @@ void _syncNativeAudioElapsedDisplay() {
 
   if (a.paused) {
     try {
-      if ((a.currentTime - sessionSec).abs() > 0.04) {
-        a.currentTime = sessionSec;
+      final end = _bufferedEndSec(a);
+      if (end == null && sessionSec > 1.5) {
+        return;
+      }
+      final target = _safeTargetCurrentTimeSec(a, sessionSec);
+      if ((a.currentTime - target).abs() > 0.04) {
+        a.currentTime = target;
       }
     } catch (_) {}
     return;
   }
 
-  final drift = (sessionSec - a.currentTime).abs();
+  if (_webSkipSeekCoalesceUntil != null &&
+      DateTime.now().isBefore(_webSkipSeekCoalesceUntil!)) {
+    return;
+  }
+
+  final end = _bufferedEndSec(a);
+  if (end != null && sessionSec > end + 0.05) {
+    return;
+  }
+
+  final target = _safeTargetCurrentTimeSec(a, sessionSec);
+  final drift = (target - a.currentTime).abs();
   if (drift <= 1.15) return;
   try {
-    a.currentTime = sessionSec;
+    a.currentTime = target;
   } catch (_) {}
 }
 
@@ -84,6 +122,7 @@ void _onWebAudioPlay(html.AudioElement a) {
 }
 
 void _onWebAudioPauseOrEnd(html.AudioElement a) {
+  bibleFmWebLiveEdgeActive.value = false;
   _webFoldPlayingSegment();
   _webPausedSince = DateTime.now();
   _webStopSessionTick();
@@ -99,22 +138,54 @@ void _webApplyLiveElapsedJumpFromPausedWallClock() {
   _syncNativeAudioElapsedDisplay();
 }
 
+Future<void> _webEnsureMinLiveSpinnerShown(DateTime started) async {
+  const minShow = Duration(milliseconds: 280);
+  final elapsed = DateTime.now().difference(started);
+  if (elapsed < minShow) {
+    await Future<void>.delayed(minShow - elapsed);
+  }
+}
+
+/// Garante que o spinner cobre buffer + primeiro frame de áudio (TuneIn), não só a Promise do [play].
+Future<void> _webAwaitPlayActuallyStarted(html.AudioElement el) async {
+  if (!el.paused &&
+      el.readyState >= html.MediaElement.HAVE_CURRENT_DATA) {
+    return;
+  }
+  try {
+    await el.onPlay.first.timeout(const Duration(seconds: 12));
+  } on TimeoutException {
+    // Mantém coerência com o finally (spinner + edge).
+  }
+}
+
 /// Religa o fluxo ao instante actual e **inicia reprodução** (toque no live = gesto).
 Future<void> bibleFmWebReloadLiveStream(String baseUrl) async {
   final el = _webBibleFmAudio;
   if (el == null) return;
-  _webApplyLiveElapsedJumpFromPausedWallClock();
-  var uri = Uri.parse(baseUrl);
-  final q = Map<String, String>.from(uri.queryParameters);
-  q['_'] = DateTime.now().millisecondsSinceEpoch.toString();
-  uri = uri.replace(queryParameters: q);
-  el.src = uri.toString();
-  el.load();
+  if (bibleFmWebLiveReloading.value) return;
+  final spinnerStarted = DateTime.now();
+  bibleFmWebLiveReloading.value = true;
   try {
-    await el.play();
-    _syncNativeAudioElapsedDisplay();
-  } catch (_) {
-    _syncWebPlaybackNotifierFrom(el);
+    _webApplyLiveElapsedJumpFromPausedWallClock();
+    var uri = Uri.parse(baseUrl);
+    final q = Map<String, String>.from(uri.queryParameters);
+    q['_'] = DateTime.now().millisecondsSinceEpoch.toString();
+    uri = uri.replace(queryParameters: q);
+    el.src = uri.toString();
+    el.load();
+    _webSkipSeekCoalesceUntil = DateTime.now().add(const Duration(seconds: 4));
+    try {
+      await el.play();
+      await _webAwaitPlayActuallyStarted(el);
+      bibleFmWebLiveEdgeActive.value = !el.paused;
+    } catch (_) {
+      bibleFmWebLiveEdgeActive.value = false;
+      _syncWebPlaybackNotifierFrom(el);
+    }
+  } finally {
+    await _webEnsureMinLiveSpinnerShown(spinnerStarted);
+    bibleFmWebLiveReloading.value = false;
   }
 }
 
