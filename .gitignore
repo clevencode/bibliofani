@@ -45,3 +45,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Vercel (CLI link local; pasta de staging opcional para deploy manual)
+.vercel
+/deploy-vercel/
