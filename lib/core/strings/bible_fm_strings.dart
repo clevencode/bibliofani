@@ -30,6 +30,10 @@ const String kBibleFmConnectivityLost =
 // --- Leitor: página ---
 const String kBibleFmSemanticsPlayerPage = 'Bible FM, leitor de rádio';
 
+// --- Web: feedback dinâmico no título (substitui texto estático) ---
+const String kBibleFmWebFeedbackReady = 'Pronto para ouvir';
+const String kBibleFmWebFeedbackBuffering = 'A carregar o fluxo…';
+
 // --- Transporte (barra inferior) ---
 const String kBibleFmSemanticsTransportRecoveryRestart =
     'Controlos: pausa, cancelar carregamento ou reiniciar a app';

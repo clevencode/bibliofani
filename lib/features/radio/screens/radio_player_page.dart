@@ -158,7 +158,6 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
   Widget build(BuildContext context) {
     if (kIsWeb) {
       final isOffline = ref.watch(networkOfflineProvider);
-      final scheme = Theme.of(context).colorScheme;
       final brightness = Theme.of(context).brightness;
       const webCapsuleH = 52.0;
       const webPadH = 8.0;
@@ -185,15 +184,7 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
-                            kBibleFmNotificationTitle,
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.headlineSmall
-                                ?.copyWith(
-                                  color: scheme.onSurface,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
+                          _WebRealtimeFeedbackLine(isOffline: isOffline),
                           const SizedBox(height: 16),
                           DecoratedBox(
                             decoration: BoxDecoration(
@@ -583,6 +574,172 @@ class _StreamLoadingStrip extends StatelessWidget {
 
 /// Direto / religar fluxo — à esquerda da barra nativa (play integrado no `<audio>`).
 /// Estados alinhados ao [LiveModeButton] / TuneIn; ouve os mesmos [Listenable] que a pastilha.
+String _webPlaybackFeedbackMessage({
+  required bool offline,
+  required bool reloading,
+  required bool playing,
+  required bool buffering,
+  required bool liveEdge,
+  required bool sessionStarted,
+}) {
+  if (offline) return kBibleFmStatusChipOffline;
+  if (reloading) return kBibleFmLiveTooltipReloading;
+  if (playing && buffering) return kBibleFmWebFeedbackBuffering;
+  if (playing && liveEdge) return kBibleFmStatusChipLive;
+  if (playing) return kBibleFmStatusChipListening;
+  if (sessionStarted) return kBibleFmStatusChipPaused;
+  return kBibleFmWebFeedbackReady;
+}
+
+Color _webPlaybackFeedbackColor(
+  BuildContext context, {
+  required bool offline,
+  required bool playing,
+  required bool liveEdge,
+  required bool reloading,
+  required bool buffering,
+  required bool sessionStarted,
+  required Brightness brightness,
+}) {
+  final scheme = Theme.of(context).colorScheme;
+  if (offline) return scheme.error;
+  if (playing && liveEdge) {
+    return AppTheme.transportLivePulseColor(brightness);
+  }
+  if (reloading || (playing && buffering)) {
+    return scheme.onSurfaceVariant;
+  }
+  if (playing) return scheme.onSurface;
+  if (sessionStarted) {
+    return scheme.onSurface.withValues(alpha: 0.88);
+  }
+  return scheme.onSurfaceVariant;
+}
+
+/// Título web: estado em tempo real + pingo «ON AIR» em directo.
+class _WebRealtimeFeedbackLine extends StatelessWidget {
+  const _WebRealtimeFeedbackLine({required this.isOffline});
+
+  final bool isOffline;
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        bibleFmWebPlaybackActive,
+        bibleFmWebLiveReloading,
+        bibleFmWebLiveEdgeActive,
+        bibleFmWebBuffering,
+        bibleFmWebSessionEverStarted,
+      ]),
+      builder: (context, _) {
+        final playing = bibleFmWebPlaybackActive.value;
+        final reloading = bibleFmWebLiveReloading.value;
+        final liveEdge = bibleFmWebLiveEdgeActive.value;
+        final buffering = bibleFmWebBuffering.value;
+        final sessionStarted = bibleFmWebSessionEverStarted.value;
+        final msg = _webPlaybackFeedbackMessage(
+          offline: isOffline,
+          reloading: reloading,
+          playing: playing,
+          buffering: buffering,
+          liveEdge: liveEdge,
+          sessionStarted: sessionStarted,
+        );
+        final color = _webPlaybackFeedbackColor(
+          context,
+          offline: isOffline,
+          playing: playing,
+          liveEdge: liveEdge,
+          reloading: reloading,
+          buffering: buffering,
+          sessionStarted: sessionStarted,
+          brightness: brightness,
+        );
+        final showOnAirDot =
+            !isOffline && playing && liveEdge && !reloading;
+
+        return Semantics(
+          liveRegion: true,
+          label: msg,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (showOnAirDot) ...[
+                Container(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFFE53935),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFE53935).withValues(alpha: 0.45),
+                        blurRadius: 6,
+                        spreadRadius: 0.5,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
+              Flexible(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 280),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  layoutBuilder: (current, previous) {
+                    return Stack(
+                      alignment: Alignment.center,
+                      clipBehavior: Clip.none,
+                      children: [
+                        ...previous,
+                        ?current,
+                      ],
+                    );
+                  },
+                  transitionBuilder: (child, animation) {
+                    final pull = Tween<Offset>(
+                      begin: const Offset(0, 0.22),
+                      end: Offset.zero,
+                    ).animate(
+                      CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeOutCubic,
+                      ),
+                    );
+                    return SlideTransition(
+                      position: pull,
+                      child: FadeTransition(
+                        opacity: animation,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Text(
+                    msg,
+                    key: ValueKey<String>(msg),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: color,
+                          fontWeight: FontWeight.w600,
+                          height: 1.25,
+                        ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _WebLiveStreamButton extends StatelessWidget {
   const _WebLiveStreamButton({
     this.diameter = 44,

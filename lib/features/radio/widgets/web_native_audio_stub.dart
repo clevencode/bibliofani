@@ -12,6 +12,12 @@ final bibleFmWebLiveReloading = ValueNotifier<bool>(false);
 /// Fora da web não actualiza.
 final bibleFmWebLiveEdgeActive = ValueNotifier<bool>(false);
 
+/// Fora da web não actualiza.
+final bibleFmWebBuffering = ValueNotifier<bool>(false);
+
+/// Fora da web não actualiza.
+final bibleFmWebSessionEverStarted = ValueNotifier<bool>(false);
+
 /// Implementação vazia (não web). Ver `web_native_audio_web.dart`.
 class WebNativeAudioControls extends StatelessWidget {
   const WebNativeAudioControls({

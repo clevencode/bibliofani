@@ -18,6 +18,12 @@ final bibleFmWebLiveReloading = ValueNotifier<bool>(false);
 /// Depois de religar ao fluxo com sucesso: sincronizado com «já em directo» (desactiva live até pausa).
 final bibleFmWebLiveEdgeActive = ValueNotifier<bool>(false);
 
+/// `waiting` no `<audio>` (feedback no título).
+final bibleFmWebBuffering = ValueNotifier<bool>(false);
+
+/// `true` após o primeiro play (distigue pausa de «ainda não iniciou»).
+final bibleFmWebSessionEverStarted = ValueNotifier<bool>(false);
+
 DateTime? _webPlayingSince;
 Duration _webElapsedPriorSegments = Duration.zero;
 /// Início da pausa actual (relógio de parede) — salto TuneIn ao tocar em live.
@@ -114,6 +120,8 @@ void _webStopSessionTick() {
 }
 
 void _onWebAudioPlay(html.AudioElement a) {
+  bibleFmWebSessionEverStarted.value = true;
+  bibleFmWebBuffering.value = false;
   _webPlayingSince ??= DateTime.now();
   _webPausedSince = null;
   _syncWebPlaybackNotifierFrom(a);
@@ -122,6 +130,7 @@ void _onWebAudioPlay(html.AudioElement a) {
 }
 
 void _onWebAudioPauseOrEnd(html.AudioElement a) {
+  bibleFmWebBuffering.value = false;
   bibleFmWebLiveEdgeActive.value = false;
   _webFoldPlayingSegment();
   _webPausedSince = DateTime.now();
@@ -236,6 +245,15 @@ class _WebNativeAudioControlsState extends State<WebNativeAudioControls> {
       a.onPlay.listen((_) => _onWebAudioPlay(a));
       a.onPause.listen((_) => _onWebAudioPauseOrEnd(a));
       a.onEnded.listen((_) => _onWebAudioPauseOrEnd(a));
+      a.onWaiting.listen((_) {
+        bibleFmWebBuffering.value = true;
+      });
+      a.onCanPlay.listen((_) {
+        bibleFmWebBuffering.value = false;
+      });
+      a.onPlaying.listen((_) {
+        bibleFmWebBuffering.value = false;
+      });
       a.onLoadedData.listen((_) => _syncNativeAudioElapsedDisplay());
       a.onLoadedMetadata.listen((_) => _syncNativeAudioElapsedDisplay());
       _syncWebPlaybackNotifierFrom(a);
