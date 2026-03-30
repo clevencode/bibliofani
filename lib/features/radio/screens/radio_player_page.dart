@@ -159,8 +159,8 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
     if (kIsWeb) {
       final isOffline = ref.watch(networkOfflineProvider);
       const webCapsuleH = 52.0;
-      const webPadH = 8.0;
-      const webPadV = 5.0;
+      const webPadH = 10.0;
+      const webPadV = 6.0;
       const webLiveDiameter = 42.0;
       const webAudioH = 40.0;
       final innerH = webCapsuleH - 2 * webPadV;
@@ -171,6 +171,7 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
           backgroundColor: Colors.transparent,
           body: Stack(
             fit: StackFit.expand,
+            clipBehavior: Clip.none,
             children: [
               const _PageBackground(),
               SafeArea(
@@ -187,14 +188,15 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                           const SizedBox(height: 16),
                           DecoratedBox(
                             decoration: BoxDecoration(
-                              color: AppTheme.webPlaybackCapsuleOuter,
+                              gradient: AppTheme.webPlaybackCapsuleGradient,
                               borderRadius: BorderRadius.circular(
                                 webCapsuleH / 2,
                               ),
                               border: Border.all(
-                                color: AppTheme.webPlaybackCapsuleOuterBorder,
+                                color: AppTheme.webPlaybackCapsuleBorder,
                                 width: 1,
                               ),
+                              boxShadow: AppTheme.webPlaybackCapsuleShadow,
                             ),
                             child: Padding(
                               padding: const EdgeInsets.fromLTRB(
@@ -233,7 +235,7 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                                         );
                                       },
                                     ),
-                                    const SizedBox(width: 10),
+                                    const SizedBox(width: 8),
                                     Expanded(
                                       child: WebNativeAudioControls(
                                         streamUrl: kBibleFmLiveStreamUrl,
@@ -743,10 +745,11 @@ class _WebLiveStreamButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
-    final iconSize = (diameter * 0.42).clamp(16.0, 24.0);
-    final iconColor = AppTheme.transportPlayIcon(brightness);
+    final iconSize = (diameter * 0.44).clamp(16.0, 24.0);
+    final discFill = AppTheme.liveStreamDiscFill(brightness);
     final broadcastIconColor =
-        brightness == Brightness.dark ? Colors.black : iconColor;
+        AppTheme.liveStreamBroadcastIconColor(brightness);
+    final spinnerColor = broadcastIconColor;
     return ListenableBuilder(
       listenable: Listenable.merge([
         bibleFmWebPlaybackActive,
@@ -804,7 +807,11 @@ class _WebLiveStreamButton extends StatelessWidget {
             height: diameter,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppTheme.transportPlayFill(brightness),
+              color: discFill,
+              border: Border.all(
+                color: AppTheme.liveStreamDiscRing(brightness),
+                width: 1,
+              ),
             ),
             child: Center(
               child: reloading
@@ -814,8 +821,8 @@ class _WebLiveStreamButton extends StatelessWidget {
                       child: CircularProgressIndicator(
                         strokeWidth: 2.5,
                         strokeCap: StrokeCap.round,
-                        color: iconColor,
-                        backgroundColor: iconColor.withValues(alpha: 0.22),
+                        color: spinnerColor,
+                        backgroundColor: spinnerColor.withValues(alpha: 0.2),
                       ),
                     )
                   : BroadcastSignalIcon(

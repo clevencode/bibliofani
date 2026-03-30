@@ -35,10 +35,10 @@ class LiveModeButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
     final isDark = brightness == Brightness.dark;
-    final fillColor = AppTheme.transportPlayFill(brightness);
-    final iconColor = AppTheme.transportPlayIcon(brightness);
+    final fillColor = AppTheme.liveStreamDiscFill(brightness);
     final broadcastIconColor =
-        isDark ? Colors.black : iconColor;
+        AppTheme.liveStreamBroadcastIconColor(brightness);
+    final spinnerColor = broadcastIconColor;
 
     final buttonSize = size.clamp(
       AppSpacing.g(AppSpacing.playControlDiameterMinSteps, scale),
@@ -106,6 +106,10 @@ class LiveModeButton extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: fillColor,
+          border: Border.all(
+            color: AppTheme.liveStreamDiscRing(brightness),
+            width: 1,
+          ),
         ),
         alignment: Alignment.center,
         child: isLiveReloading
@@ -115,8 +119,8 @@ class LiveModeButton extends StatelessWidget {
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
                   strokeCap: StrokeCap.round,
-                  color: iconColor,
-                  backgroundColor: iconColor.withValues(alpha: 0.22),
+                  color: spinnerColor,
+                  backgroundColor: spinnerColor.withValues(alpha: 0.2),
                 ),
               )
             : BroadcastSignalIcon(color: broadcastIconColor, size: iconSize),

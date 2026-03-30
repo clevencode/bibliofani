@@ -223,8 +223,8 @@ class _WebNativeAudioControlsState extends State<WebNativeAudioControls> {
     _registerFactoryOnce();
   }
 
-  /// Tema **claro** nos controlos nativos (Blink/WebKit): superfície clara, texto legível,
-  /// barra de tempo discreta — reutiliza o mesmo `<audio controls>`.
+  /// **Mindfulness light** nos controlos nativos (Blink/WebKit): superfície sálvia suave,
+  /// texto calmo, sem trilho cinza — mesmo `<audio controls>`.
   static void _ensureWebAudioLightControlsStyles() {
     html.document.getElementById('bible-fm-audio-light-theme')?.remove();
     final style = html.StyleElement()
@@ -232,29 +232,36 @@ class _WebNativeAudioControlsState extends State<WebNativeAudioControls> {
       ..text = '''
 audio.bible-fm-web-audio {
   color-scheme: light;
+  -webkit-font-smoothing: antialiased;
 }
 audio.bible-fm-web-audio::-webkit-media-controls-enclosure {
   border-radius: 9999px;
   overflow: hidden;
 }
 audio.bible-fm-web-audio::-webkit-media-controls-panel {
-  background: linear-gradient(180deg, #FFFFFF 0%, #FBFBFA 100%);
+  background: linear-gradient(180deg, #F8FAF7 0%, #E8EEE4 100%);
   border-radius: 9999px;
 }
 audio.bible-fm-web-audio::-webkit-media-controls-current-time-display,
 audio.bible-fm-web-audio::-webkit-media-controls-time-remaining-display {
-  color: #37352F;
-  font-size: 12px;
-  font-weight: 500;
+  color: #3D4A42;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.045em;
   text-shadow: none;
+  font-variant-numeric: tabular-nums;
+}
+/* Sem trilho cinza: só o indicador nativo (thumb / progresso) permanece visível no Blink. */
+audio.bible-fm-web-audio::-webkit-media-controls-timeline-container {
+  background-color: transparent;
+  border: none;
 }
 audio.bible-fm-web-audio::-webkit-media-controls-timeline {
-  background-color: rgba(55, 53, 47, 0.14);
+  background-color: transparent;
   border-radius: 9999px;
-  height: 4px;
   min-height: 4px;
-  margin-left: 6px;
-  margin-right: 6px;
+  margin-left: 8px;
+  margin-right: 8px;
 }
 ''';
     html.document.head!.append(style);
