@@ -1,5 +1,9 @@
-# Build Flutter web e publicação no ramo gh-pages (GitHub Pages).
-# Depois: Settings → Pages → Source: Deploy from a branch → branch gh-pages / / (root).
+# Flutter web → GitHub Pages (fonte oficial «GitHub Actions»).
+#
+# 1) Repo → Settings → Pages → Build and deployment
+#    Source: GitHub Actions (não «Deploy from a branch»).
+# 2) No primeiro deploy: aprove o ambiente «github-pages» se o GitHub pedir.
+#
 # URL: https://clevencode.github.io/biblefm/
 
 name: Deploy web to GitHub Pages
@@ -10,14 +14,16 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
-  group: pages-${{ github.ref }}
+  group: github-pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,9 +39,16 @@ jobs:
       - name: Desactivar Jekyll (assets Flutter)
         run: touch build/web/.nojekyll
 
-      - uses: peaceiris/actions-gh-pages@v4
+      - uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./build/web
-          publish_branch: gh-pages
-          force_orphan: true
+          path: build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
