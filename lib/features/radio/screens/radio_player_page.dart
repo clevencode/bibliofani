@@ -158,20 +158,20 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
   Widget build(BuildContext context) {
     if (kIsWeb) {
       final isOffline = ref.watch(networkOfflineProvider);
+      final brightness = Theme.of(context).brightness;
       const webCapsuleH = 52.0;
-      const webPadH = 10.0;
-      const webPadV = 6.0;
+      const webPadH = 8.0;
+      const webPadV = 5.0;
       const webLiveDiameter = 42.0;
       const webAudioH = 40.0;
       final innerH = webCapsuleH - 2 * webPadV;
       return Semantics(
         container: true,
-        label: kBibleFmWebFrSemanticsPlayerPage,
+        label: kBibleFmSemanticsPlayerPage,
         child: Scaffold(
           backgroundColor: Colors.transparent,
           body: Stack(
             fit: StackFit.expand,
-            clipBehavior: Clip.none,
             children: [
               const _PageBackground(),
               SafeArea(
@@ -188,15 +188,19 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                           const SizedBox(height: 16),
                           DecoratedBox(
                             decoration: BoxDecoration(
-                              gradient: AppTheme.webPlaybackCapsuleGradient,
+                              color: AppTheme.transportCapsuleTrack(brightness),
                               borderRadius: BorderRadius.circular(
                                 webCapsuleH / 2,
                               ),
                               border: Border.all(
-                                color: AppTheme.webPlaybackCapsuleBorder,
+                                color: AppTheme.transportLiveBorder(brightness)
+                                    .withValues(
+                                      alpha: brightness == Brightness.dark
+                                          ? 0.35
+                                          : 0.5,
+                                    ),
                                 width: 1,
                               ),
-                              boxShadow: AppTheme.webPlaybackCapsuleShadow,
                             ),
                             child: Padding(
                               padding: const EdgeInsets.fromLTRB(
@@ -235,7 +239,7 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                                         );
                                       },
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 10),
                                     Expanded(
                                       child: WebNativeAudioControls(
                                         streamUrl: kBibleFmLiveStreamUrl,

@@ -330,8 +330,7 @@ abstract final class AppTheme {
   static Color transportLiveIcon(Brightness brightness) =>
       brightness == Brightness.light ? _notionInk : const Color(0xFFE6E6E4);
 
-  /// Disco do botão **live** — branco com sopro de sálvia em dark (harmonia com [webPlaybackCapsuleGradient]);
-  /// em light nativo mantém-se o par Notion original.
+  /// Disco do botão **live** — branco com sopro de sálvia em dark; em light o par Notion original.
   static Color liveStreamDiscFill(Brightness brightness) =>
       brightness == Brightness.dark
           ? const Color(0xFFF7F9F6)
@@ -343,7 +342,7 @@ abstract final class AppTheme {
           ? const Color(0xFF3D4A42)
           : transportPlayIcon(brightness);
 
-  /// Contorno fino do disco live sobre a cápsula mindfulness (só quando aplicável).
+  /// Contorno fino do disco live sobre o trilho de transporte.
   static Color liveStreamDiscRing(Brightness brightness) =>
       brightness == Brightness.dark
           ? const Color(0x5990A088)
@@ -360,40 +359,6 @@ abstract final class AppTheme {
       brightness == Brightness.dark
           ? const Color(0xFFD6D6D4)
           : const Color(0xFF3E3E3C);
-
-  /// Cápsula web — **mindfulness light**: névoa sálvia suave (calma, baixa saturação).
-  static const LinearGradient webPlaybackCapsuleGradient = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [
-      Color(0xFFF8FAF7),
-      Color(0xFFE8EEE4),
-    ],
-  );
-
-  /// Contorno discreto no mesmo tom vegetal (sem cinzento industrial).
-  static const Color webPlaybackCapsuleBorder = Color(0xFFC5D1C0);
-
-  /// Sombras difusas com um pé de verde-ardósia (menos “preto puro”).
-  static List<BoxShadow> get webPlaybackCapsuleShadow => const [
-        BoxShadow(
-          color: Color(0x152A3B30),
-          blurRadius: 48,
-          offset: Offset(0, 20),
-          spreadRadius: -14,
-        ),
-        BoxShadow(
-          color: Color(0x0A2F3D32),
-          blurRadius: 26,
-          offset: Offset(0, 8),
-          spreadRadius: -6,
-        ),
-        BoxShadow(
-          color: Color(0x08405542),
-          blurRadius: 0,
-          offset: Offset(0, 1),
-        ),
-      ];
 
   /// Círculo do indicador de pulso em **en direct** (a reproduzir).
   static Color transportLivePulseColor(Brightness brightness) =>

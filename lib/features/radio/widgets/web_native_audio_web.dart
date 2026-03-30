@@ -223,58 +223,12 @@ class _WebNativeAudioControlsState extends State<WebNativeAudioControls> {
     _registerFactoryOnce();
   }
 
-  /// **Mindfulness light** nos controlos nativos (Blink/WebKit): superfície sálvia suave,
-  /// texto calmo, sem trilho cinza — mesmo `<audio controls>`.
-  static void _ensureWebAudioLightControlsStyles() {
-    html.document.getElementById('bible-fm-audio-light-theme')?.remove();
-    final style = html.StyleElement()
-      ..id = 'bible-fm-audio-light-theme'
-      ..text = '''
-audio.bible-fm-web-audio {
-  color-scheme: light;
-  -webkit-font-smoothing: antialiased;
-}
-audio.bible-fm-web-audio::-webkit-media-controls-enclosure {
-  border-radius: 9999px;
-  overflow: hidden;
-}
-audio.bible-fm-web-audio::-webkit-media-controls-panel {
-  background: linear-gradient(180deg, #F8FAF7 0%, #E8EEE4 100%);
-  border-radius: 9999px;
-}
-audio.bible-fm-web-audio::-webkit-media-controls-current-time-display,
-audio.bible-fm-web-audio::-webkit-media-controls-time-remaining-display {
-  color: #3D4A42;
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.045em;
-  text-shadow: none;
-  font-variant-numeric: tabular-nums;
-}
-/* Sem trilho cinza: só o indicador nativo (thumb / progresso) permanece visível no Blink. */
-audio.bible-fm-web-audio::-webkit-media-controls-timeline-container {
-  background-color: transparent;
-  border: none;
-}
-audio.bible-fm-web-audio::-webkit-media-controls-timeline {
-  background-color: transparent;
-  border-radius: 9999px;
-  min-height: 4px;
-  margin-left: 8px;
-  margin-right: 8px;
-}
-''';
-    html.document.head!.append(style);
-  }
-
   void _registerFactoryOnce() {
     if (_factoryRegistered) return;
     _factoryRegistered = true;
     final url = widget.streamUrl;
-    _ensureWebAudioLightControlsStyles();
     ui_web.platformViewRegistry.registerViewFactory(_viewType, (int _) {
       final a = html.AudioElement()
-        ..className = 'bible-fm-web-audio'
         ..controls = true
         ..preload = 'none'
         ..src = url
