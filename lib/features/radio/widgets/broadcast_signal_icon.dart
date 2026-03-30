@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Ícone de **emissão / rádio** para a pílula «live»: traçado vectorial
-/// [Icons.podcasts_rounded] — linhas suaves, nítido em qualquer escala (estilo
-/// próximo dos símbolos SF «ondas + centro» sem o ruído de um CustomPaint denso).
+/// Ícone **live / rádio** para o botão «live»: [Icons.podcasts_rounded] —
+/// ondas de emissão (Material), distinto de Wi‑Fi ou TV.
 class BroadcastSignalIcon extends StatelessWidget {
   const BroadcastSignalIcon({
     super.key,

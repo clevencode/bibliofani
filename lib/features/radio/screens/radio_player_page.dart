@@ -158,7 +158,6 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
   Widget build(BuildContext context) {
     if (kIsWeb) {
       final isOffline = ref.watch(networkOfflineProvider);
-      final brightness = Theme.of(context).brightness;
       const webCapsuleH = 52.0;
       const webPadH = 8.0;
       const webPadV = 5.0;
@@ -167,7 +166,7 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
       final innerH = webCapsuleH - 2 * webPadV;
       return Semantics(
         container: true,
-        label: kBibleFmSemanticsPlayerPage,
+        label: kBibleFmWebFrSemanticsPlayerPage,
         child: Scaffold(
           backgroundColor: Colors.transparent,
           body: Stack(
@@ -188,17 +187,12 @@ class _RadioPlayerPageState extends ConsumerState<RadioPlayerPage> {
                           const SizedBox(height: 16),
                           DecoratedBox(
                             decoration: BoxDecoration(
-                              color: AppTheme.transportCapsuleTrack(brightness),
+                              color: AppTheme.webPlaybackCapsuleOuter,
                               borderRadius: BorderRadius.circular(
                                 webCapsuleH / 2,
                               ),
                               border: Border.all(
-                                color: AppTheme.transportLiveBorder(brightness)
-                                    .withValues(
-                                      alpha: brightness == Brightness.dark
-                                          ? 0.35
-                                          : 0.5,
-                                    ),
+                                color: AppTheme.webPlaybackCapsuleOuterBorder,
                                 width: 1,
                               ),
                             ),
@@ -582,13 +576,13 @@ String _webPlaybackFeedbackMessage({
   required bool liveEdge,
   required bool sessionStarted,
 }) {
-  if (offline) return kBibleFmStatusChipOffline;
-  if (reloading) return kBibleFmLiveTooltipReloading;
-  if (playing && buffering) return kBibleFmWebFeedbackBuffering;
-  if (playing && liveEdge) return kBibleFmStatusChipLive;
-  if (playing) return kBibleFmStatusChipListening;
-  if (sessionStarted) return kBibleFmStatusChipPaused;
-  return kBibleFmWebFeedbackReady;
+  if (offline) return kBibleFmWebFrFeedbackOffline;
+  if (reloading) return kBibleFmWebFrFeedbackReloading;
+  if (playing && buffering) return kBibleFmWebFrFeedbackBuffering;
+  if (playing && liveEdge) return kBibleFmWebFrFeedbackLive;
+  if (playing) return kBibleFmWebFrFeedbackListening;
+  if (sessionStarted) return kBibleFmWebFrFeedbackPaused;
+  return kBibleFmWebFrFeedbackReady;
 }
 
 Color _webPlaybackFeedbackColor(
@@ -599,12 +593,11 @@ Color _webPlaybackFeedbackColor(
   required bool reloading,
   required bool buffering,
   required bool sessionStarted,
-  required Brightness brightness,
 }) {
   final scheme = Theme.of(context).colorScheme;
   if (offline) return scheme.error;
   if (playing && liveEdge) {
-    return AppTheme.transportLivePulseColor(brightness);
+    return Colors.white;
   }
   if (reloading || (playing && buffering)) {
     return scheme.onSurfaceVariant;
@@ -624,7 +617,6 @@ class _WebRealtimeFeedbackLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
     return ListenableBuilder(
       listenable: Listenable.merge([
         bibleFmWebPlaybackActive,
@@ -655,7 +647,6 @@ class _WebRealtimeFeedbackLine extends StatelessWidget {
           reloading: reloading,
           buffering: buffering,
           sessionStarted: sessionStarted,
-          brightness: brightness,
         );
         final showOnAirDot =
             !isOffline && playing && liveEdge && !reloading;
@@ -754,6 +745,8 @@ class _WebLiveStreamButton extends StatelessWidget {
     final brightness = Theme.of(context).brightness;
     final iconSize = (diameter * 0.42).clamp(16.0, 24.0);
     final iconColor = AppTheme.transportPlayIcon(brightness);
+    final broadcastIconColor =
+        brightness == Brightness.dark ? Colors.black : iconColor;
     return ListenableBuilder(
       listenable: Listenable.merge([
         bibleFmWebPlaybackActive,
@@ -772,20 +765,20 @@ class _WebLiveStreamButton extends StatelessWidget {
         String semanticsLabel;
         String tooltipMsg;
         if (isOffline) {
-          semanticsLabel = kBibleFmLiveA11yOffline;
-          tooltipMsg = kBibleFmLiveTooltipOffline;
+          semanticsLabel = kBibleFmWebFrLiveA11yOffline;
+          tooltipMsg = kBibleFmWebFrLiveTooltipOffline;
         } else if (reloading) {
-          semanticsLabel = kBibleFmLiveA11yReloading;
-          tooltipMsg = kBibleFmLiveTooltipReloading;
+          semanticsLabel = kBibleFmWebFrLiveA11yReloading;
+          tooltipMsg = kBibleFmWebFrLiveTooltipReloading;
         } else if (playing && atLiveEdge) {
-          semanticsLabel = kBibleFmLiveA11yActive;
-          tooltipMsg = kBibleFmLiveTooltipActive;
+          semanticsLabel = kBibleFmWebFrLiveA11yActive;
+          tooltipMsg = kBibleFmWebFrLiveTooltipActive;
         } else if (canTap) {
-          semanticsLabel = kBibleFmLiveA11yGoLive;
-          tooltipMsg = kBibleFmLiveTooltipGoLive;
+          semanticsLabel = kBibleFmWebFrLiveA11yGoLive;
+          tooltipMsg = kBibleFmWebFrLiveTooltipGoLive;
         } else {
-          semanticsLabel = kBibleFmLiveA11yPauseToEnable;
-          tooltipMsg = kBibleFmLiveTooltipPauseToEnable;
+          semanticsLabel = kBibleFmWebFrLiveA11yPauseToEnable;
+          tooltipMsg = kBibleFmWebFrLiveTooltipPauseToEnable;
         }
 
         Widget disc = InkWell(
@@ -826,7 +819,7 @@ class _WebLiveStreamButton extends StatelessWidget {
                       ),
                     )
                   : BroadcastSignalIcon(
-                      color: iconColor,
+                      color: broadcastIconColor,
                       size: iconSize,
                     ),
             ),

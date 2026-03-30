@@ -37,6 +37,8 @@ class LiveModeButton extends StatelessWidget {
     final isDark = brightness == Brightness.dark;
     final fillColor = AppTheme.transportPlayFill(brightness);
     final iconColor = AppTheme.transportPlayIcon(brightness);
+    final broadcastIconColor =
+        isDark ? Colors.black : iconColor;
 
     final buttonSize = size.clamp(
       AppSpacing.g(AppSpacing.playControlDiameterMinSteps, scale),
@@ -117,7 +119,7 @@ class LiveModeButton extends StatelessWidget {
                   backgroundColor: iconColor.withValues(alpha: 0.22),
                 ),
               )
-            : BroadcastSignalIcon(color: iconColor, size: iconSize),
+            : BroadcastSignalIcon(color: broadcastIconColor, size: iconSize),
       ),
     );
     if (isOffline) {

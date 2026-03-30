@@ -30,9 +30,27 @@ const String kBibleFmConnectivityLost =
 // --- Leitor: página ---
 const String kBibleFmSemanticsPlayerPage = 'Bible FM, leitor de rádio';
 
-// --- Web: feedback dinâmico no título (substitui texto estático) ---
-const String kBibleFmWebFeedbackReady = 'Pronto para ouvir';
-const String kBibleFmWebFeedbackBuffering = 'A carregar o fluxo…';
+// --- Web: textos visíveis / accessibilité en **français** ---
+const String kBibleFmWebFrSemanticsPlayerPage = 'Bible FM, lecteur radio';
+const String kBibleFmWebFrFeedbackOffline = 'Pas de connexion';
+const String kBibleFmWebFrFeedbackReloading = 'Connexion au direct…';
+const String kBibleFmWebFrFeedbackBuffering = 'Chargement du flux…';
+const String kBibleFmWebFrFeedbackLive = 'En direct';
+const String kBibleFmWebFrFeedbackListening = 'En écoute';
+const String kBibleFmWebFrFeedbackPaused = 'En pause';
+const String kBibleFmWebFrFeedbackReady = 'Prêt à écouter';
+const String kBibleFmWebFrLiveA11yOffline = 'Direct indisponible sans réseau';
+const String kBibleFmWebFrLiveTooltipOffline = 'Pas de connexion Internet';
+const String kBibleFmWebFrLiveA11yReloading = 'Reconnexion au direct…';
+const String kBibleFmWebFrLiveTooltipReloading = 'Connexion au flux en direct…';
+const String kBibleFmWebFrLiveA11yActive = 'Direct actif';
+const String kBibleFmWebFrLiveTooltipActive = 'Direct actif';
+const String kBibleFmWebFrLiveA11yGoLive = 'Écouter le direct';
+const String kBibleFmWebFrLiveTooltipGoLive = 'Écouter le direct';
+const String kBibleFmWebFrLiveA11yPauseToEnable =
+    'Direct : mettre la lecture en pause pour activer';
+const String kBibleFmWebFrLiveTooltipPauseToEnable =
+    'Mettre en pause pour pouvoir aller au direct';
 
 // --- Transporte (barra inferior) ---
 const String kBibleFmSemanticsTransportRecoveryRestart =

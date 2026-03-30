@@ -223,12 +223,51 @@ class _WebNativeAudioControlsState extends State<WebNativeAudioControls> {
     _registerFactoryOnce();
   }
 
+  /// Tema **claro** nos controlos nativos (Blink/WebKit): superfície clara, texto legível,
+  /// barra de tempo discreta — reutiliza o mesmo `<audio controls>`.
+  static void _ensureWebAudioLightControlsStyles() {
+    html.document.getElementById('bible-fm-audio-light-theme')?.remove();
+    final style = html.StyleElement()
+      ..id = 'bible-fm-audio-light-theme'
+      ..text = '''
+audio.bible-fm-web-audio {
+  color-scheme: light;
+}
+audio.bible-fm-web-audio::-webkit-media-controls-enclosure {
+  border-radius: 9999px;
+  overflow: hidden;
+}
+audio.bible-fm-web-audio::-webkit-media-controls-panel {
+  background: linear-gradient(180deg, #FFFFFF 0%, #FBFBFA 100%);
+  border-radius: 9999px;
+}
+audio.bible-fm-web-audio::-webkit-media-controls-current-time-display,
+audio.bible-fm-web-audio::-webkit-media-controls-time-remaining-display {
+  color: #37352F;
+  font-size: 12px;
+  font-weight: 500;
+  text-shadow: none;
+}
+audio.bible-fm-web-audio::-webkit-media-controls-timeline {
+  background-color: rgba(55, 53, 47, 0.14);
+  border-radius: 9999px;
+  height: 4px;
+  min-height: 4px;
+  margin-left: 6px;
+  margin-right: 6px;
+}
+''';
+    html.document.head!.append(style);
+  }
+
   void _registerFactoryOnce() {
     if (_factoryRegistered) return;
     _factoryRegistered = true;
     final url = widget.streamUrl;
+    _ensureWebAudioLightControlsStyles();
     ui_web.platformViewRegistry.registerViewFactory(_viewType, (int _) {
       final a = html.AudioElement()
+        ..className = 'bible-fm-web-audio'
         ..controls = true
         ..preload = 'none'
         ..src = url

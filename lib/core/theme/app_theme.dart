@@ -32,7 +32,8 @@ abstract final class AppTheme {
   static const Color mediaNotificationBackground = Color(0xFF1565A0);
 
   /// Fundo principal da app em modo escuro (corpo / scaffold).
-  static const Color darkAppBackground = Color(0xFF171717);
+  /// Web: alinhado ao fundo preto do `<body>` (#000000).
+  static const Color darkAppBackground = Color(0xFF000000);
 
   /// Fundo claro: cinzento quente tipo sidebar + página (sem gradiente forte).
   static const LinearGradient notionLightBackgroundGradient = LinearGradient(
@@ -340,6 +341,10 @@ abstract final class AppTheme {
       brightness == Brightness.dark
           ? const Color(0xFFD6D6D4)
           : const Color(0xFF3E3E3C);
+
+  /// **Web** (fundo preto): anel exterior em torno do `<audio controls>` — papel claro, hierarquia sobre o preto.
+  static const Color webPlaybackCapsuleOuter = Color(0xFFEEEDEB);
+  static const Color webPlaybackCapsuleOuterBorder = Color(0xFFDCDAD6);
 
   /// Círculo do indicador de pulso em **en direct** (a reproduzir).
   static Color transportLivePulseColor(Brightness brightness) =>
