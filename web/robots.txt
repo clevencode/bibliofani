@@ -1,0 +1,5 @@
+# Se usar domínio próprio, atualize a URL do Sitemap abaixo.
+User-agent: *
+Allow: /
+
+Sitemap: https://clevencode.github.io/biblefm/sitemap.xml

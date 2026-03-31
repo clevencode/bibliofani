@@ -1,12 +1,12 @@
 {
-    "name": "meu_app",
-    "short_name": "meu_app",
+    "name": "Bible FM — Radio en direct",
+    "short_name": "Bible FM",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#000000",
-    "theme_color": "#171717",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#F7F6F3",
+    "theme_color": "#37352F",
+    "description": "Lecteur web Bible FM : streaming en direct, contrôles audio et minuteur de veille.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

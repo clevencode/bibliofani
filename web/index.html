@@ -1,35 +1,110 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
   <base href="$FLUTTER_BASE_HREF">
+  <!-- SEO: substitua clevencode.github.io/biblefm por um domínio fixo se aplicável. -->
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Bible FM — leitor de rádio">
+  <meta http-equiv="Content-Language" content="fr">
+
+  <title>Bible FM — Radio en direct | Web</title>
+  <meta name="description" content="Écoutez Bible FM en ligne : lecteur web léger, flux audio en direct, bascule vers le live et minuteur de veille. Fonctionne dans le navigateur, sans application à installer.">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <meta name="googlebot" content="index, follow">
+  <meta name="format-detection" content="telephone=no">
+
+  <link rel="canonical" href="https://clevencode.github.io/biblefm/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Bible FM — Radio en direct">
+  <meta property="og:description" content="Écoutez Bible FM en ligne : lecteur web léger, flux audio en direct et minuteur de veille.">
+  <meta property="og:url" content="https://clevencode.github.io/biblefm/">
+  <meta property="og:site_name" content="Bible FM">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:image" content="https://clevencode.github.io/biblefm/icons/Icon-512.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Bible FM — Radio en direct">
+  <meta name="twitter:description" content="Écoutez Bible FM en ligne : lecteur web léger, flux audio en direct et minuteur de veille.">
+  <meta name="twitter:image" content="https://clevencode.github.io/biblefm/icons/Icon-512.png">
+
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F7F6F3">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#09090B">
+  <meta name="color-scheme" content="light dark">
 
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Bible FM">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <link rel="icon" type="image/png" href="favicon.png">
 
-  <!-- Preconnect ao host do stream: menos latência no primeiro play (alinhar com radio_stream_config). -->
+  <!-- Preconnect au host du stream : moins de latence au premier play. -->
   <link rel="dns-prefetch" href="https://servidor13.brlogic.com">
   <link rel="preconnect" href="https://servidor13.brlogic.com" crossorigin>
 
-  <title>Bible FM</title>
   <link rel="manifest" href="manifest.json">
 
-  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://clevencode.github.io/biblefm/#website",
+        "name": "Bible FM",
+        "url": "https://clevencode.github.io/biblefm/",
+        "description": "Lecteur web Bible FM : streaming audio en direct dans le navigateur.",
+        "inLanguage": "fr-FR",
+        "publisher": { "@id": "https://clevencode.github.io/biblefm/#org" }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://clevencode.github.io/biblefm/#org",
+        "name": "Bible FM",
+        "url": "https://clevencode.github.io/biblefm/"
+      },
+      {
+        "@type": "WebApplication",
+        "name": "Bible FM",
+        "url": "https://clevencode.github.io/biblefm/",
+        "applicationCategory": "EntertainmentApplication",
+        "operatingSystem": "Web",
+        "browserRequirements": "Requires JavaScript. HTML5 audio.",
+        "description": "Lecteur de radio Bible FM pour le web : direct, contrôles audio et minuteur de sommeil.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "RadioStation",
+        "name": "Bible FM",
+        "url": "https://clevencode.github.io/biblefm/",
+        "broadcastDisplayName": "Bible FM"
+      }
+    ]
+  }
+  </script>
 
   <style>
     html, body { height: 100%; margin: 0; }
-    /* Fundo totalmente preto até o primeiro frame Flutter. */
     body { background-color: #000000; }
   </style>
 </head>
 <body>
+  <noscript>
+    <h1>Bible FM</h1>
+    <p>Écoutez Bible FM dans votre navigateur. Activez JavaScript pour charger le lecteur web.</p>
+  </noscript>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

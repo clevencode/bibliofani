@@ -82,12 +82,7 @@ class RadioPlayerPage extends StatelessWidget {
                               webCapsuleH / 2,
                             ),
                             border: Border.all(
-                              color: AppTheme.transportLiveBorder(brightness)
-                                  .withValues(
-                                    alpha: brightness == Brightness.dark
-                                        ? 0.35
-                                        : 0.5,
-                                  ),
+                              color: AppTheme.transportCapsuleOutline(brightness),
                               width: 1,
                             ),
                           ),
@@ -488,70 +483,88 @@ class _WebSleepTimerButtonState extends State<_WebSleepTimerButton> {
         builder: (dialogContext) {
           final brightness = Theme.of(dialogContext).brightness;
           final screenW = MediaQuery.sizeOf(dialogContext).width;
+          // Mesma lógica que [RadioPlayerPage]: padding horizontal 24 + maxWidth 560.
           final targetW = (screenW - 48).clamp(280.0, 560.0).toDouble();
           const webCapsuleH = 52.0;
-          return Align(
-            // Alinha no mesmo eixo vertical da cápsula de audio control (efeito de sobreposição).
-            alignment: const Alignment(0, 0.12),
-            child: Dialog(
-              insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-              backgroundColor: Colors.transparent,
-              child: StatefulBuilder(
-                builder: (context, setLocalState) {
-                  final valid = canApply();
-                  return SizedBox(
-                    width: targetW,
-                    height: 52,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: AppTheme.transportCapsuleTrack(brightness),
-                        borderRadius: BorderRadius.circular(webCapsuleH / 2),
-                        border: Border.all(
-                          color: AppTheme.transportLiveBorder(brightness)
-                              .withValues(
-                                alpha: brightness == Brightness.dark
-                                    ? 0.35
-                                    : 0.65,
-                              ),
-                          width: 1,
+          return SafeArea(
+            child: Align(
+              // Eixo vertical semelhante à cápsula de áudio: bloco centrado no SafeArea,
+              // com a barra ligeiramente abaixo do centro (linha de estado + espaçamento).
+              alignment: const Alignment(0, 0.12),
+              child: Dialog(
+                insetPadding: EdgeInsets.zero,
+                backgroundColor: Colors.transparent,
+                child: StatefulBuilder(
+                  builder: (context, setLocalState) {
+                    final valid = canApply();
+                    return SizedBox(
+                      width: targetW,
+                      height: 52,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppTheme.transportCapsuleTrack(brightness),
+                          borderRadius: BorderRadius.circular(webCapsuleH / 2),
+                          border: Border.all(
+                            color: AppTheme.transportCapsuleOutline(brightness),
+                            width: 1,
+                          ),
                         ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 6,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.max,
-                          children: [
-                            _SleepUnitChip(
-                              label: 'Heure',
-                              selected: unit == _SleepInputUnit.hour,
-                              onTap: () => setLocalState(
-                                () => unit = _SleepInputUnit.hour,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 6,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.max,
+                            children: [
+                              _SleepUnitChip(
+                                label: 'Heure',
+                                selected: unit == _SleepInputUnit.hour,
+                                onTap: () => setLocalState(
+                                  () => unit = _SleepInputUnit.hour,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            _SleepUnitChip(
-                              label: 'Minute',
-                              selected: unit == _SleepInputUnit.minute,
-                              onTap: () => setLocalState(
-                                () => unit = _SleepInputUnit.minute,
+                              const SizedBox(width: 8),
+                              _SleepUnitChip(
+                                label: 'Minute',
+                                selected: unit == _SleepInputUnit.minute,
+                                onTap: () => setLocalState(
+                                  () => unit = _SleepInputUnit.minute,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _SleepChipField(
-                                width: 180,
-                                hintText: kBibleFmWebFrSleepInputHint,
-                                label: kBibleFmWebFrSleepInputHint,
-                                controller: inputController,
-                                autofocus: true,
-                                onChanged: (_) => setLocalState(() {}),
-                                onSubmitted: (_) {
-                                  if (hasTimer || !canApply()) return;
-                                  final raw =
-                                      int.tryParse(inputController.text.trim()) ?? 0;
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _SleepChipField(
+                                  width: 180,
+                                  hintText: kBibleFmWebFrSleepInputHint,
+                                  label: kBibleFmWebFrSleepInputHint,
+                                  controller: inputController,
+                                  autofocus: true,
+                                  onChanged: (_) => setLocalState(() {}),
+                                  onSubmitted: (_) {
+                                    if (hasTimer || !canApply()) return;
+                                    final raw = int.tryParse(
+                                          inputController.text.trim(),
+                                        ) ??
+                                        0;
+                                    final minutes = unit == _SleepInputUnit.hour
+                                        ? raw * 60
+                                        : raw;
+                                    _startSleepTimer(minutes);
+                                    Navigator.of(dialogContext).pop();
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _SleepActionButton(
+                                cancelMode: false,
+                                enabled: valid,
+                                onTap: () {
+                                  final raw = int.tryParse(
+                                        inputController.text.trim(),
+                                      ) ??
+                                      0;
+                                  if (raw <= 0) return;
                                   final minutes = unit == _SleepInputUnit.hour
                                       ? raw * 60
                                       : raw;
@@ -559,28 +572,13 @@ class _WebSleepTimerButtonState extends State<_WebSleepTimerButton> {
                                   Navigator.of(dialogContext).pop();
                                 },
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            _SleepActionButton(
-                              cancelMode: false,
-                              enabled: valid,
-                              onTap: () {
-                                final raw =
-                                    int.tryParse(inputController.text.trim()) ?? 0;
-                                if (raw <= 0) return;
-                                final minutes = unit == _SleepInputUnit.hour
-                                    ? raw * 60
-                                    : raw;
-                                _startSleepTimer(minutes);
-                                Navigator.of(dialogContext).pop();
-                              },
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ),
           );
@@ -595,7 +593,6 @@ class _WebSleepTimerButtonState extends State<_WebSleepTimerButton> {
   Widget build(BuildContext context) {
     final hasTimer = _endAt != null;
     final brightness = Theme.of(context).brightness;
-    final fg = Theme.of(context).colorScheme.onSurfaceVariant;
     final ring = AppTheme.transportLiveBorder(brightness).withValues(
       alpha: hasTimer ? 0.65 : 0.45,
     );
@@ -615,29 +612,31 @@ class _WebSleepTimerButtonState extends State<_WebSleepTimerButton> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(17),
               border: Border.all(color: ring, width: 1),
-              color: hasTimer ? fg.withValues(alpha: 0.1) : Colors.transparent,
+              color: hasTimer
+                  ? AppTheme.liveStreamDiscFill(brightness)
+                  : Colors.transparent,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.bedtime_outlined, size: 17, color: fg),
+                Icon(Icons.timer_outlined, size: 17, color: Colors.black),
                 if (hasTimer) ...[
                   const SizedBox(width: 4),
                   Text(
                     _labelFromRemaining(),
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: fg,
-                      fontWeight: FontWeight.w600,
-                    ),
+                          color: Colors.black,
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
                   const SizedBox(width: 4),
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: _cancelSleepTimer,
-                    child: Icon(
+                    child: const Icon(
                       Icons.close_rounded,
                       size: 15,
-                      color: fg.withValues(alpha: 0.9),
+                      color: Colors.black,
                     ),
                   ),
                 ],
@@ -670,7 +669,7 @@ class _SleepUnitChip extends StatelessWidget {
     final chipFill = selected
         ? chromeInner
         : chromeInner.withValues(
-            alpha: brightness == Brightness.light ? 0.82 : 0.88,
+            alpha: brightness == Brightness.light ? 0.76 : 0.86,
           );
     return InkWell(
       onTap: onTap,
@@ -683,31 +682,29 @@ class _SleepUnitChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: selected
-                ? AppTheme.transportChromeTimelineTrack(brightness)
-                    .withValues(alpha: brightness == Brightness.light ? 0.72 : 0.55)
-                : rim.withValues(alpha: brightness == Brightness.light ? 0.55 : 0.42),
-            width: selected && brightness == Brightness.light ? 1.5 : 1,
+                ? AppTheme.transportChromeTimelineTrack(brightness).withValues(
+                    alpha: brightness == Brightness.light ? 0.82 : 0.58,
+                  )
+                : rim.withValues(
+                    alpha: brightness == Brightness.light ? 0.48 : 0.4,
+                  ),
+            width: 1,
           ),
         ),
         child: Center(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: selected ? Colors.black : Colors.transparent,
-                width: 1,
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: onChrome,
-                      fontWeight: FontWeight.normal,
-                    ),
-              ),
-            ),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: onChrome.withValues(
+                    alpha: selected
+                        ? 1.0
+                        : brightness == Brightness.light
+                            ? 0.72
+                            : 0.78,
+                  ),
+                  fontWeight:
+                      selected ? FontWeight.w700 : FontWeight.w500,
+                ),
           ),
         ),
       ),
@@ -771,7 +768,7 @@ class _SleepChipField extends StatelessWidget {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.black.withValues(
-                          alpha: brightness == Brightness.light ? 0.07 : 0.1,
+                          alpha: brightness == Brightness.light ? 0.055 : 0.095,
                         ),
                         Colors.transparent,
                       ],
@@ -801,7 +798,7 @@ class _SleepChipField extends StatelessWidget {
                 hintText: hintText ?? label ?? '',
                 hintStyle: TextStyle(
                   color: onChrome.withValues(
-                    alpha: brightness == Brightness.light ? 0.48 : 0.45,
+                    alpha: brightness == Brightness.light ? 0.44 : 0.42,
                   ),
                 ),
                 filled: true,
@@ -849,12 +846,12 @@ class _SleepActionButton extends StatelessWidget {
               ? AppTheme.transportChromeInnerFill(brightness)
               : null,
           border: Border.all(
-            color: rim.withValues(alpha: enabled ? 0.72 : 0.35),
-            width: brightness == Brightness.light ? 1.25 : 1,
+            color: rim.withValues(alpha: enabled ? 0.76 : 0.32),
+            width: 1,
           ),
         ),
         child: Icon(
-          cancelMode ? Icons.close_rounded : Icons.check_rounded,
+          cancelMode ? Icons.close_rounded : Icons.check_circle,
           size: 26,
           color: enabled ? onChrome : onChrome.withValues(alpha: 0.38),
         ),

@@ -3,6 +3,8 @@ import 'package:meu_app/core/theme/app_spacing.dart';
 
 /// Tema **claro** (Notion) e **escuro minimalista premium**: poucos tons, muito contraste
 /// legível, superfícies quase pretas e realces discretos — sem gradientes chamativos.
+/// **Barras de transporte em claro:** cinza quente com micro-contraste (cápsula → poço → slider),
+/// interesse visual por hierarquia e tom, sem saturar.
 /// Tipografia Material 3 (sem fontes de rede na web). [AppSpacing]: grelha 8pt.
 abstract final class AppTheme {
   /// Transição claro ↔ escuro: um pouco mais longa, curva tipo Material 3.
@@ -32,6 +34,14 @@ abstract final class AppTheme {
   static const Color _premiumDarkOnPrimaryContainer = Color(0xFFF4F4F5);
   static const Color _premiumDarkError = Color(0xFFFCA5A5);
   static const Color _premiumDarkErrorContainer = Color(0xFF450A0A);
+
+  // —— Light «premium minimal» — barras / cápsula (cinzas quentes, hierarquia subtil) ——
+  static const Color _premiumLightCapsuleTrack = Color(0xFF4A4845);
+  static const Color _premiumLightChromeInner = Color(0xFFF1F0EC);
+  static const Color _premiumLightChromeOnInner = Color(0xFF262522);
+  static const Color _premiumLightTimelineTrack = Color(0xFFC5C3BE);
+  static const Color _premiumLightTimelineProgress = Color(0xFF6E6C67);
+  static const Color _premiumLightLiveBorder = Color(0xFFD8D6D1);
 
   static const double _notionCornerRadius = notionControlRadius;
 
@@ -437,40 +447,46 @@ abstract final class AppTheme {
   static Color liveStreamButtonSplash(Brightness brightness) =>
       transportChromeOnInner(brightness).withValues(alpha: 0.12);
 
-  /// Traço fino tipo callout Notion sobre fundo claro (#E3E2E0) / contorno painel escuro.
+  /// Contorno live / cápsulas: claro = traço quente subtil; escuro = zinco.
   static Color transportLiveBorder(Brightness brightness) =>
       brightness == Brightness.light
-          ? const Color(0xFFE3E2E0)
+          ? _premiumLightLiveBorder
           : const Color(0xFF3F3F48);
 
-  /// Trilho do comprimido **live + play** (cinza claro sobre fundo escuro).
+  /// Traço da cápsula de transporte e da **barra do temporizador** — mesma leitura visual.
+  static Color transportCapsuleOutline(Brightness brightness) =>
+      transportLiveBorder(brightness).withValues(
+        alpha: brightness == Brightness.dark ? 0.35 : 0.5,
+      );
+
+  /// Trilho exterior do comprimido **live + play** (claro = carvão quente suave).
   static Color transportCapsuleTrack(Brightness brightness) =>
       brightness == Brightness.dark
           ? const Color(0xFFD6D6D4)
-          : const Color(0xFF3E3E3C);
+          : _premiumLightCapsuleTrack;
 
-  /// Cápsula interna estilo controlos do browser (Chrome / Web) sobre [transportCapsuleTrack].
+  /// Poço interior da cápsula sobre [transportCapsuleTrack] (claro = papel lavado).
   static Color transportChromeInnerFill(Brightness brightness) =>
       brightness == Brightness.dark
           ? const Color(0xFFEFEFEF)
-          : const Color(0xFFE8E8E6);
+          : _premiumLightChromeInner;
 
   /// Ícones e tempo sobre [transportChromeInnerFill].
   static Color transportChromeOnInner(Brightness brightness) =>
       brightness == Brightness.dark
           ? const Color(0xFF141414)
-          : const Color(0xFF242422);
+          : _premiumLightChromeOnInner;
 
-  /// Trilho fino do slider (Chrome-like).
+  /// Trilho fino do slider temporal (claro = cinza quente arejado).
   static Color transportChromeTimelineTrack(Brightness brightness) =>
       brightness == Brightness.dark
           ? const Color(0xFFCFCFCF)
-          : const Color(0xFFB0B0AC);
+          : _premiumLightTimelineTrack;
 
   static Color transportChromeTimelineProgress(Brightness brightness) =>
       brightness == Brightness.dark
           ? const Color(0xFF9A9A9A)
-          : const Color(0xFF888884);
+          : _premiumLightTimelineProgress;
 
   /// Círculo do indicador de pulso em **en direct** (a reproduzir).
   static Color transportLivePulseColor(Brightness brightness) =>
