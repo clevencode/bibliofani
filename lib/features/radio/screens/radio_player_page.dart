@@ -143,7 +143,7 @@ Color _webPlaybackFeedbackColor(
 }) {
   final scheme = Theme.of(context).colorScheme;
   if (playing && liveEdge) {
-    return Colors.white;
+    return scheme.primary;
   }
   if (reloading || (playing && buffering)) {
     return scheme.onSurfaceVariant;
@@ -190,6 +190,7 @@ class _WebRealtimeFeedbackLine extends StatelessWidget {
           sessionStarted: sessionStarted,
         );
         final showOnAirDot = playing && liveEdge && !reloading;
+        final onAirColor = Theme.of(context).colorScheme.error;
 
         return Semantics(
           liveRegion: true,
@@ -204,10 +205,10 @@ class _WebRealtimeFeedbackLine extends StatelessWidget {
                   height: 9,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFFE53935),
+                    color: onAirColor,
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFE53935).withValues(alpha: 0.45),
+                        color: onAirColor.withValues(alpha: 0.4),
                         blurRadius: 6,
                         spreadRadius: 0.5,
                       ),
@@ -257,8 +258,6 @@ class _WebRealtimeFeedbackLine extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: color,
-                          fontWeight: FontWeight.w600,
-                          height: 1.25,
                         ),
                   ),
                 ),

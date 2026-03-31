@@ -17,6 +17,45 @@ void _cancelWebAutoplayUnlock() {
   _webAutoplayUnlockSub = null;
 }
 
+bool _webPageShowAutoplayHookAttached = false;
+
+/// Garante tentativa de reprodução em **cada** exibição da página: reload normal,
+/// reabertura da aba (bfcache) e reforço tardio se o primeiro [play] falhou em arranque.
+void _ensureReloadAutoplayHook() {
+  if (_webPageShowAutoplayHookAttached) return;
+  _webPageShowAutoplayHookAttached = true;
+  html.window.onPageShow.listen((html.Event e) {
+    final el = _webBibleFmAudio;
+    if (el == null) return;
+
+    final persisted =
+        e is html.PageTransitionEvent && e.persisted == true;
+
+    void tryPlayAfterLoad() {
+      try {
+        el.load();
+      } catch (_) {}
+      unawaited(el.play().catchError((Object? _) {}));
+    }
+
+    if (persisted) {
+      // Voltar com a página em cache do browser: nova ligação ao fluxo.
+      tryPlayAfterLoad();
+      return;
+    }
+
+    // Reload completo (F5): o bootstrap já correu; se ainda em pausa, volta a tentar
+    // quando o `<audio>` estiver estável no DOM.
+    unawaited(
+      Future<void>.delayed(const Duration(milliseconds: 420), () {
+        final current = _webBibleFmAudio;
+        if (current == null || !current.paused) return;
+        tryPlayAfterLoad();
+      }),
+    );
+  });
+}
+
 /// [Media Session](https://w3c.github.io/mediasession/): centro de média do SO, teclas físicas, notificação.
 void _installWebMediaSession(html.AudioElement a) {
   final ms = html.window.navigator.mediaSession;
@@ -69,6 +108,7 @@ Future<void> _bootstrapWebPlayback(html.AudioElement a) async {
   await Future<void>.microtask(() {});
 
   try {
+    a.load();
     await a.play();
     return;
   } catch (_) {
@@ -324,6 +364,7 @@ class _WebNativeAudioControlsState extends State<WebNativeAudioControls> {
         ..style.boxSizing = 'border-box'
         ..append(a);
       _webBibleFmAudio = a;
+      _ensureReloadAutoplayHook();
       a.onPlay.listen((_) => _onWebAudioPlay(a));
       a.onPause.listen((_) => _onWebAudioPauseOrEnd(a));
       a.onEnded.listen((_) => _onWebAudioPauseOrEnd(a));

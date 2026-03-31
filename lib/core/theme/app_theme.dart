@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:meu_app/core/theme/app_spacing.dart';
 
-/// Tema **claro e escuro** inspirado no **Notion**: texto «#37352F», páginas
-/// quentes claras, azul de link, cantos subtis, bordas em vez de sombras.
-/// Tipografia do Material 3 (sem carregar fontes de rede na web).
-///
-/// [AppSpacing] mantém a grelha 8pt.
+/// Tema **claro** (Notion) e **escuro minimalista premium**: poucos tons, muito contraste
+/// legível, superfícies quase pretas e realces discretos — sem gradientes chamativos.
+/// Tipografia Material 3 (sem fontes de rede na web). [AppSpacing]: grelha 8pt.
 abstract final class AppTheme {
   /// Transição claro ↔ escuro: um pouco mais longa, curva tipo Material 3.
   static const Duration themeCrossfadeDuration = Duration(milliseconds: 420);
@@ -14,8 +12,26 @@ abstract final class AppTheme {
   /// Cantos de controlos (botões, campos).
   static const double notionControlRadius = 4;
 
-  /// Cantos de blocos / cartões (alinhado à UI Notion).
+  /// Cantos de blocos / cartões.
   static const double notionBlockRadius = 6;
+
+  // —— Dark «minimal premium» (zinc / carvão, monocromático) ——
+  static const Color _premiumDarkBg = Color(0xFF09090B);
+  static const Color _premiumDarkSurfaceLowest = Color(0xFF0C0C0F);
+  static const Color _premiumDarkSurfaceLow = Color(0xFF121215);
+  static const Color _premiumDarkSurfaceContainer = Color(0xFF18181C);
+  static const Color _premiumDarkSurfaceHigh = Color(0xFF1F1F24);
+  static const Color _premiumDarkSurfaceHighest = Color(0xFF26262C);
+  static const Color _premiumDarkOnSurface = Color(0xFFFAFAFA);
+  static const Color _premiumDarkOnSurfaceVariant = Color(0xFF71717A);
+  static const Color _premiumDarkOutline = Color(0xFF2A2A32);
+  static const Color _premiumDarkOutlineVariant = Color(0xFF1F1F24);
+  static const Color _premiumDarkPrimary = Color(0xFFE4E4E7);
+  static const Color _premiumDarkOnPrimary = Color(0xFF09090B);
+  static const Color _premiumDarkPrimaryContainer = Color(0xFF3F3F46);
+  static const Color _premiumDarkOnPrimaryContainer = Color(0xFFF4F4F5);
+  static const Color _premiumDarkError = Color(0xFFFCA5A5);
+  static const Color _premiumDarkErrorContainer = Color(0xFF450A0A);
 
   static const double _notionCornerRadius = notionControlRadius;
 
@@ -23,12 +39,10 @@ abstract final class AppTheme {
   static const Color _notionInk = Color(0xFF37352F);
   static const Color _notionInkSecondary = Color(0xFF787774);
   static const Color _notionBlue = Color(0xFF2383E2);
-  static const Color _notionBlueDark = Color(0xFF529CCA);
   static const Color _notionRed = Color(0xFFEB5757);
 
-  /// Fundo principal da app em modo escuro (corpo / scaffold).
-  /// Web: alinhado ao fundo preto do `<body>` (#000000).
-  static const Color darkAppBackground = Color(0xFF000000);
+  /// Fundo principal em modo escuro (premium minimal — carvão, não preto puro).
+  static const Color darkAppBackground = _premiumDarkBg;
 
   /// Fundo claro: cinzento quente tipo sidebar + página (sem gradiente forte).
   static const LinearGradient notionLightBackgroundGradient = LinearGradient(
@@ -44,42 +58,42 @@ abstract final class AppTheme {
 
   static ColorScheme _notionColorScheme(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
-    final accent = isDark ? _notionBlueDark : _notionBlue;
+    final accent = isDark ? _premiumDarkPrimary : _notionBlue;
 
     final base = ColorScheme.fromSeed(
       seedColor: accent,
       brightness: brightness,
       surfaceTint: Colors.transparent,
-      contrastLevel: isDark ? 0.06 : 0.1,
+      contrastLevel: isDark ? 0.0 : 0.1,
     );
 
     if (isDark) {
       return base.copyWith(
-        surface: darkAppBackground,
-        onSurface: const Color(0xFFE6E6E4),
-        onSurfaceVariant: const Color(0xFF9B9B9B),
-        surfaceContainerLowest: const Color(0xFF121212),
-        surfaceContainerLow: const Color(0xFF1C1C1C),
-        surfaceContainer: const Color(0xFF242424),
-        surfaceContainerHigh: const Color(0xFF2A2A2A),
-        surfaceContainerHighest: const Color(0xFF303030),
-        outline: const Color(0xFF373737),
-        outlineVariant: const Color(0xFF2C2C2C),
-        primary: _notionBlueDark,
-        onPrimary: Colors.white,
-        primaryContainer: const Color(0xFF1E3A4C),
-        onPrimaryContainer: const Color(0xFFC2E5FF),
-        secondary: const Color(0xFF9B9B9B),
-        onSecondary: darkAppBackground,
-        error: const Color(0xFFFF8B7B),
-        onError: const Color(0xFF370000),
-        errorContainer: const Color(0xFF6B2A2A),
-        onErrorContainer: const Color(0xFFFFDAD4),
-        inverseSurface: const Color(0xFFFBFBFA),
-        onInverseSurface: _notionInk,
-        inversePrimary: _notionBlue,
-        shadow: Colors.black,
-        scrim: const Color(0xCC000000),
+        surface: _premiumDarkBg,
+        onSurface: _premiumDarkOnSurface,
+        onSurfaceVariant: _premiumDarkOnSurfaceVariant,
+        surfaceContainerLowest: _premiumDarkSurfaceLowest,
+        surfaceContainerLow: _premiumDarkSurfaceLow,
+        surfaceContainer: _premiumDarkSurfaceContainer,
+        surfaceContainerHigh: _premiumDarkSurfaceHigh,
+        surfaceContainerHighest: _premiumDarkSurfaceHighest,
+        outline: _premiumDarkOutline,
+        outlineVariant: _premiumDarkOutlineVariant,
+        primary: _premiumDarkPrimary,
+        onPrimary: _premiumDarkOnPrimary,
+        primaryContainer: _premiumDarkPrimaryContainer,
+        onPrimaryContainer: _premiumDarkOnPrimaryContainer,
+        secondary: _premiumDarkOnSurfaceVariant,
+        onSecondary: _premiumDarkBg,
+        error: _premiumDarkError,
+        onError: _premiumDarkOnPrimary,
+        errorContainer: _premiumDarkErrorContainer,
+        onErrorContainer: const Color(0xFFFFE4E6),
+        inverseSurface: _premiumDarkOnSurface,
+        onInverseSurface: _premiumDarkBg,
+        inversePrimary: _premiumDarkOnPrimary,
+        shadow: const Color(0xE6000000),
+        scrim: const Color(0xD9000000),
       );
     }
 
@@ -144,12 +158,13 @@ abstract final class AppTheme {
         titleTextStyle: TextStyle(
           color: scheme.onSurface,
           fontSize: 15,
-          fontWeight: FontWeight.w600,
-          letterSpacing: -0.2,
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0.12,
+          height: 1.35,
         ),
       ),
       dividerTheme: DividerThemeData(
-        color: scheme.outline.withValues(alpha: isDark ? 0.72 : 0.88),
+        color: scheme.outline.withValues(alpha: isDark ? 0.45 : 0.88),
         thickness: 1,
         space: 1,
       ),
@@ -160,7 +175,7 @@ abstract final class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(notionBlockRadius),
           side: BorderSide(
-            color: scheme.outline.withValues(alpha: isDark ? 0.58 : 0.72),
+            color: scheme.outline.withValues(alpha: isDark ? 0.35 : 0.72),
           ),
         ),
       ),
@@ -170,11 +185,15 @@ abstract final class AppTheme {
         checkmarkColor: scheme.onPrimary,
         labelStyle: TextStyle(
           color: scheme.onSurface,
-          fontWeight: FontWeight.w500,
-          letterSpacing: 0.1,
+          fontWeight: FontWeight.w400,
+          letterSpacing: 0.18,
+          height: 1.35,
         ),
         secondaryLabelStyle: TextStyle(
           color: scheme.onSurfaceVariant,
+          fontWeight: FontWeight.w400,
+          letterSpacing: 0.12,
+          height: 1.35,
         ),
         side: BorderSide(color: scheme.outline.withValues(alpha: 0.5)),
         shape: RoundedRectangleBorder(
@@ -187,6 +206,11 @@ abstract final class AppTheme {
           backgroundColor: scheme.primary,
           foregroundColor: scheme.onPrimary,
           elevation: 0,
+          textStyle: TextStyle(
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.2,
+            height: 1.25,
+          ),
           padding: EdgeInsets.symmetric(
             horizontal: AppSpacing.s3,
             vertical: AppSpacing.s2,
@@ -198,6 +222,11 @@ abstract final class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: scheme.primary,
+          textStyle: TextStyle(
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.18,
+            height: 1.25,
+          ),
           minimumSize: minimumTap,
           padding: EdgeInsets.symmetric(
             horizontal: AppSpacing.s3,
@@ -210,7 +239,11 @@ abstract final class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: scheme.primary,
-          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+          textStyle: TextStyle(
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.15,
+            height: 1.25,
+          ),
           minimumSize: minimumTap,
           padding: EdgeInsets.symmetric(
             horizontal: AppSpacing.s2,
@@ -239,7 +272,9 @@ abstract final class AppTheme {
         contentTextStyle: TextStyle(
           color: scheme.onInverseSurface,
           fontSize: 14,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w400,
+          letterSpacing: 0.12,
+          height: 1.45,
         ),
         actionTextColor: scheme.inversePrimary,
         behavior: SnackBarBehavior.floating,
@@ -255,8 +290,9 @@ abstract final class AppTheme {
         textStyle: TextStyle(
           color: scheme.onInverseSurface,
           fontSize: 12,
-          height: 1.35,
-          fontWeight: FontWeight.w500,
+          height: 1.4,
+          fontWeight: FontWeight.w400,
+          letterSpacing: 0.15,
         ),
         decoration: BoxDecoration(
           color: scheme.inverseSurface,
@@ -270,6 +306,8 @@ abstract final class AppTheme {
     );
   }
 
+  /// Tipografia minimalista: hierarquia pelo **tamanho** e texto corpo em **w400**;
+  /// títulos **w500**, tracking discreto, interlinha arejada.
   static TextTheme _textTheme(bool isDark, ColorScheme scheme) {
     final base = (isDark
             ? Typography.material2021().white
@@ -278,36 +316,90 @@ abstract final class AppTheme {
           bodyColor: scheme.onSurface,
           displayColor: scheme.onSurface,
         );
-    var themed = base.copyWith(
-      bodySmall: base.bodySmall?.copyWith(
-        color: scheme.onSurfaceVariant,
-        height: 1.4,
+
+    final titleTight = isDark ? -0.22 : -0.18;
+    final bodyTrack = 0.14;
+
+    return base.copyWith(
+      displayLarge: base.displayLarge?.copyWith(
+        fontWeight: FontWeight.w400,
+        letterSpacing: isDark ? -0.45 : -0.35,
+        height: 1.08,
       ),
-      labelSmall: base.labelSmall?.copyWith(
+      displayMedium: base.displayMedium?.copyWith(
+        fontWeight: FontWeight.w400,
+        letterSpacing: isDark ? -0.38 : -0.28,
+        height: 1.1,
+      ),
+      displaySmall: base.displaySmall?.copyWith(
+        fontWeight: FontWeight.w400,
+        letterSpacing: isDark ? -0.32 : -0.22,
+        height: 1.12,
+      ),
+      headlineLarge: base.headlineLarge?.copyWith(
+        fontWeight: FontWeight.w400,
+        letterSpacing: -0.28,
+        height: 1.14,
+      ),
+      headlineMedium: base.headlineMedium?.copyWith(
+        fontWeight: FontWeight.w500,
+        letterSpacing: -0.22,
+        height: 1.18,
+      ),
+      headlineSmall: base.headlineSmall?.copyWith(
+        fontWeight: FontWeight.w500,
+        letterSpacing: -0.18,
+        height: 1.22,
+      ),
+      titleLarge: base.titleLarge?.copyWith(
+        fontWeight: FontWeight.w500,
+        letterSpacing: titleTight,
+        height: 1.28,
+      ),
+      titleMedium: base.titleMedium?.copyWith(
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0.02,
+        height: 1.32,
+      ),
+      titleSmall: base.titleSmall?.copyWith(
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0.06,
+        height: 1.36,
+      ),
+      bodyLarge: base.bodyLarge?.copyWith(
+        fontWeight: FontWeight.w400,
+        letterSpacing: bodyTrack,
+        height: 1.55,
+      ),
+      bodyMedium: base.bodyMedium?.copyWith(
+        fontWeight: FontWeight.w400,
+        letterSpacing: bodyTrack,
+        height: 1.55,
+      ),
+      bodySmall: base.bodySmall?.copyWith(
+        fontWeight: FontWeight.w400,
+        letterSpacing: 0.12,
+        height: 1.45,
         color: scheme.onSurfaceVariant,
-        height: 1.35,
+      ),
+      labelLarge: base.labelLarge?.copyWith(
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0.1,
+        height: 1.38,
       ),
       labelMedium: base.labelMedium?.copyWith(
+        fontWeight: FontWeight.w400,
+        letterSpacing: 0.16,
+        height: 1.36,
         color: scheme.onSurfaceVariant,
-        height: 1.35,
-        fontWeight: FontWeight.w500,
+      ),
+      labelSmall: base.labelSmall?.copyWith(
+        fontWeight: FontWeight.w400,
+        letterSpacing: 0.2,
+        height: 1.34,
+        color: scheme.onSurfaceVariant,
       ),
     );
-    themed = themed.copyWith(
-      titleLarge: themed.titleLarge?.copyWith(
-        height: 1.22,
-        fontWeight: FontWeight.w600,
-        letterSpacing: isDark ? -0.18 : -0.2,
-      ),
-      titleMedium: themed.titleMedium?.copyWith(height: 1.3),
-      titleSmall: themed.titleSmall?.copyWith(
-        height: 1.35,
-        fontWeight: FontWeight.w600,
-      ),
-      bodyLarge: themed.bodyLarge?.copyWith(height: 1.5),
-      bodyMedium: themed.bodyMedium?.copyWith(height: 1.5),
-    );
-    return themed;
   }
 
   static ThemeData get light => _baseTheme(Brightness.light);
@@ -349,7 +441,7 @@ abstract final class AppTheme {
   static Color transportLiveBorder(Brightness brightness) =>
       brightness == Brightness.light
           ? const Color(0xFFE3E2E0)
-          : const Color(0xFF4A4A4A);
+          : const Color(0xFF3F3F48);
 
   /// Trilho do comprimido **live + play** (cinza claro sobre fundo escuro).
   static Color transportCapsuleTrack(Brightness brightness) =>
@@ -384,7 +476,7 @@ abstract final class AppTheme {
   static Color transportLivePulseColor(Brightness brightness) =>
       brightness == Brightness.light
           ? const Color(0xFF0F7B6C)
-          : const Color(0xFF4DAB9A);
+          : const Color(0xFF86EFAC);
 
   /// Tom **âmbar / amarelo** suave (pílula de estado, indicador «en écoute»).
   static Color transportDeferredPulseColor(Brightness brightness) =>
