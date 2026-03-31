@@ -91,4 +91,4 @@ flutter_launcher_icons:
   web:
     generate: true
     image_path: assets/splash_logo.png
-    background_color: "#171717"
+    background_color: "#000000"

@@ -38,8 +38,9 @@ class RadioPlayerPage extends StatelessWidget {
                 type: MaterialType.transparency,
                 child: Ink(
                   decoration: BoxDecoration(
-                    color:
-                        brightness == Brightness.dark ? scheme.surface : null,
+                    color: brightness == Brightness.dark
+                        ? scheme.surface
+                        : null,
                     gradient: brightness == Brightness.dark
                         ? null
                         : AppTheme.notionLightBackgroundGradient,
@@ -82,10 +83,10 @@ class RadioPlayerPage extends StatelessWidget {
                             border: Border.all(
                               color: AppTheme.transportLiveBorder(brightness)
                                   .withValues(
-                                alpha: brightness == Brightness.dark
-                                    ? 0.35
-                                    : 0.5,
-                              ),
+                                    alpha: brightness == Brightness.dark
+                                        ? 0.35
+                                        : 0.5,
+                                  ),
                               width: 1,
                             ),
                           ),
@@ -101,29 +102,8 @@ class RadioPlayerPage extends StatelessWidget {
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  ListenableBuilder(
-                                    listenable: Listenable.merge([
-                                      bibleFmWebPlaybackActive,
-                                      bibleFmWebLiveReloading,
-                                      bibleFmWebLiveEdgeActive,
-                                    ]),
-                                    builder: (context, _) {
-                                      final playing =
-                                          bibleFmWebPlaybackActive.value;
-                                      final reloading =
-                                          bibleFmWebLiveReloading.value;
-                                      final atLiveEdge =
-                                          bibleFmWebLiveEdgeActive.value;
-                                      final emphasiseLive = playing ||
-                                          reloading ||
-                                          (playing && atLiveEdge);
-                                      return Opacity(
-                                        opacity: emphasiseLive ? 1.0 : 0.45,
-                                        child: const _WebLiveStreamButton(
-                                          diameter: webLiveDiameter,
-                                        ),
-                                      );
-                                    },
+                                  const _WebLiveStreamButton(
+                                    diameter: webLiveDiameter,
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
@@ -258,28 +238,23 @@ class _WebRealtimeFeedbackLine extends StatelessWidget {
                     return Stack(
                       alignment: Alignment.center,
                       clipBehavior: Clip.none,
-                      children: [
-                        ...previous,
-                        ?current,
-                      ],
+                      children: [...previous, ?current],
                     );
                   },
                   transitionBuilder: (child, animation) {
-                    final pull = Tween<Offset>(
-                      begin: const Offset(0, 0.22),
-                      end: Offset.zero,
-                    ).animate(
-                      CurvedAnimation(
-                        parent: animation,
-                        curve: Curves.easeOutCubic,
-                      ),
-                    );
+                    final pull =
+                        Tween<Offset>(
+                          begin: const Offset(0, 0.22),
+                          end: Offset.zero,
+                        ).animate(
+                          CurvedAnimation(
+                            parent: animation,
+                            curve: Curves.easeOutCubic,
+                          ),
+                        );
                     return SlideTransition(
                       position: pull,
-                      child: FadeTransition(
-                        opacity: animation,
-                        child: child,
-                      ),
+                      child: FadeTransition(opacity: animation, child: child),
                     );
                   },
                   child: Text(
@@ -288,9 +263,9 @@ class _WebRealtimeFeedbackLine extends StatelessWidget {
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: color,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleLarge?.copyWith(color: color),
                   ),
                 ),
               ),
@@ -303,9 +278,7 @@ class _WebRealtimeFeedbackLine extends StatelessWidget {
 }
 
 class _WebLiveStreamButton extends StatelessWidget {
-  const _WebLiveStreamButton({
-    this.diameter = 44,
-  });
+  const _WebLiveStreamButton({this.diameter = 44});
 
   final double diameter;
 
@@ -313,9 +286,9 @@ class _WebLiveStreamButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
     final iconSize = (diameter * 0.44).clamp(16.0, 24.0);
-    final discFill = AppTheme.liveStreamDiscFill(brightness);
-    final broadcastIconColor =
-        AppTheme.liveStreamBroadcastIconColor(brightness);
+    final broadcastIconColor = AppTheme.liveStreamBroadcastIconColor(
+      brightness,
+    );
     final spinnerColor = broadcastIconColor;
     return ListenableBuilder(
       listenable: Listenable.merge([
@@ -327,7 +300,23 @@ class _WebLiveStreamButton extends StatelessWidget {
         final playing = bibleFmWebPlaybackActive.value;
         final reloading = bibleFmWebLiveReloading.value;
         final atLiveEdge = bibleFmWebLiveEdgeActive.value;
-        final canTap = !reloading && !(playing && atLiveEdge);
+        final isLive = playing && atLiveEdge;
+        final isListening = playing && !atLiveEdge;
+        final isPaused = !playing && !reloading;
+        final canTap = !reloading && !isLive;
+        final discFill =
+            isLive || reloading
+                ? AppTheme.liveStreamDiscFill(brightness)
+                : isListening
+                ? AppTheme.liveStreamDiscFill(brightness).withValues(alpha: 0.5)
+                : Colors.transparent;
+        final ringColor =
+            isPaused
+                ? AppTheme.liveStreamDiscRing(
+                  brightness,
+                ).withValues(alpha: brightness == Brightness.dark ? 0.95 : 1.0)
+                : AppTheme.liveStreamDiscRing(brightness);
+        final ringWidth = isPaused ? 1.8 : 1.0;
 
         String semanticsLabel;
         String tooltipMsg;
@@ -347,9 +336,8 @@ class _WebLiveStreamButton extends StatelessWidget {
 
         final disc = InkWell(
           onTap: canTap
-              ? () => unawaited(
-                    bibleFmWebReloadLiveStream(kBibleFmLiveStreamUrl),
-                  )
+              ? () =>
+                    unawaited(bibleFmWebReloadLiveStream(kBibleFmLiveStreamUrl))
               : null,
           customBorder: const CircleBorder(),
           hoverColor: canTap
@@ -366,8 +354,8 @@ class _WebLiveStreamButton extends StatelessWidget {
               shape: BoxShape.circle,
               color: discFill,
               border: Border.all(
-                color: AppTheme.liveStreamDiscRing(brightness),
-                width: 1,
+                color: ringColor,
+                width: ringWidth,
               ),
             ),
             child: Center(
@@ -392,15 +380,16 @@ class _WebLiveStreamButton extends StatelessWidget {
 
         return Semantics(
           button: true,
-          selected: playing && atLiveEdge,
+          selected: isLive,
           enabled: canTap,
           label: semanticsLabel,
           child: Tooltip(
             message: tooltipMsg,
             waitDuration: const Duration(milliseconds: 320),
             child: MouseRegion(
-              cursor:
-                  canTap ? SystemMouseCursors.click : SystemMouseCursors.basic,
+              cursor: canTap
+                  ? SystemMouseCursors.click
+                  : SystemMouseCursors.basic,
               child: Material(color: Colors.transparent, child: disc),
             ),
           ),
