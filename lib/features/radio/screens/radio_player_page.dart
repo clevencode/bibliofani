@@ -36,16 +36,27 @@ class RadioPlayerPage extends StatelessWidget {
               onLongPress: bibleFmWebBackgroundLongPressGoLive,
               child: Material(
                 type: MaterialType.transparency,
-                child: InkWell(
-                  onTap: bibleFmWebBackgroundTapPlayPause,
-                  onLongPress: bibleFmWebBackgroundLongPressGoLive,
-                  splashColor: scheme.primary.withValues(alpha: 0.14),
-                  highlightColor: scheme.primary.withValues(alpha: 0.06),
-                  hoverColor: scheme.primary.withValues(alpha: 0.05),
-                  mouseCursor: SystemMouseCursors.click,
-                  canRequestFocus: false,
-                  child: const SizedBox.expand(
-                    child: _PageBackground(),
+                child: Ink(
+                  decoration: BoxDecoration(
+                    color:
+                        brightness == Brightness.dark ? scheme.surface : null,
+                    gradient: brightness == Brightness.dark
+                        ? null
+                        : AppTheme.notionLightBackgroundGradient,
+                  ),
+                  child: InkWell(
+                    onTap: bibleFmWebBackgroundTapPlayPause,
+                    onLongPress: bibleFmWebBackgroundLongPressGoLive,
+                    splashFactory:
+                        InkSparkle.constantTurbulenceSeedSplashFactory,
+                    // Efeito granulado sem véu de cor opaco: só faíscas sobre o fundo.
+                    splashColor: Colors.transparent,
+                    highlightColor: Colors.transparent,
+                    // Sem véu de cor ao pairar: o fundo visual permanece idêntico.
+                    hoverColor: Colors.transparent,
+                    mouseCursor: SystemMouseCursors.click,
+                    canRequestFocus: false,
+                    child: const SizedBox.expand(),
                   ),
                 ),
               ),
@@ -399,20 +410,5 @@ class _WebLiveStreamButton extends StatelessWidget {
   }
 }
 
-class _PageBackground extends StatelessWidget {
-  const _PageBackground();
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    if (isDark) {
-      return DecoratedBox(decoration: BoxDecoration(color: scheme.surface));
-    }
-    return const DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: AppTheme.notionLightBackgroundGradient,
-      ),
-    );
-  }
-}
+// Fundo visual da página agora é desenhado directamente via [Ink] no `Stack`,
+// alinhado com os gradientes e superfícies em [AppTheme].
