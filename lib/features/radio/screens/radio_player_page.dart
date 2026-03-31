@@ -305,7 +305,6 @@ class _WebLiveStreamButton extends StatelessWidget {
         final atLiveEdge = bibleFmWebLiveEdgeActive.value;
         final isLive = playing && atLiveEdge;
         final isListening = playing && !atLiveEdge;
-        final isPaused = !playing && !reloading;
         final canTap = !reloading && !isLive;
         final discFill =
             isLive || reloading
@@ -313,13 +312,9 @@ class _WebLiveStreamButton extends StatelessWidget {
                 : isListening
                 ? AppTheme.liveStreamDiscFill(brightness).withValues(alpha: 0.5)
                 : Colors.transparent;
-        final ringColor =
-            isPaused
-                ? AppTheme.liveStreamDiscRing(
-                  brightness,
-                ).withValues(alpha: brightness == Brightness.dark ? 0.95 : 1.0)
-                : AppTheme.liveStreamDiscRing(brightness);
-        final ringWidth = 1.0;
+        final ringColor = AppTheme.transportLiveBorder(brightness).withValues(
+          alpha: playing || reloading ? 0.65 : 0.45,
+        );
 
         String semanticsLabel;
         String tooltipMsg;
@@ -358,7 +353,7 @@ class _WebLiveStreamButton extends StatelessWidget {
               color: discFill,
               border: Border.all(
                 color: ringColor,
-                width: ringWidth,
+                width: 1,
               ),
             ),
             child: Center(
@@ -479,9 +474,7 @@ class _WebSleepTimerButtonState extends State<_WebSleepTimerButton> {
 
   Future<void> _openSleepConfigurator() async {
     final hasTimer = _endAt != null;
-    final inputController = TextEditingController(
-      text: hasTimer ? '' : '30',
-    );
+    final inputController = TextEditingController();
     var unit = _SleepInputUnit.minute;
     bool canApply() {
       final raw = int.tryParse(inputController.text.trim()) ?? 0;
@@ -493,9 +486,10 @@ class _WebSleepTimerButtonState extends State<_WebSleepTimerButton> {
         context: context,
         barrierDismissible: true,
         builder: (dialogContext) {
-          final scheme = Theme.of(dialogContext).colorScheme;
+          final brightness = Theme.of(dialogContext).brightness;
           final screenW = MediaQuery.sizeOf(dialogContext).width;
           final targetW = (screenW - 48).clamp(280.0, 560.0).toDouble();
+          const webCapsuleH = 52.0;
           return Align(
             // Alinha no mesmo eixo vertical da cápsula de audio control (efeito de sobreposição).
             alignment: const Alignment(0, 0.12),
@@ -510,10 +504,15 @@ class _WebSleepTimerButtonState extends State<_WebSleepTimerButton> {
                     height: 52,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: scheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(999),
+                        color: AppTheme.transportCapsuleTrack(brightness),
+                        borderRadius: BorderRadius.circular(webCapsuleH / 2),
                         border: Border.all(
-                          color: scheme.outlineVariant.withValues(alpha: 0.7),
+                          color: AppTheme.transportLiveBorder(brightness)
+                              .withValues(
+                                alpha: brightness == Brightness.dark
+                                    ? 0.35
+                                    : 0.65,
+                              ),
                           width: 1,
                         ),
                       ),
@@ -544,10 +543,10 @@ class _WebSleepTimerButtonState extends State<_WebSleepTimerButton> {
                             Expanded(
                               child: _SleepChipField(
                                 width: 180,
-                                hintText: 'Digitar tempo',
-                                label: 'Digitar tempo',
+                                hintText: kBibleFmWebFrSleepInputHint,
+                                label: kBibleFmWebFrSleepInputHint,
                                 controller: inputController,
-                                autofocus: !hasTimer,
+                                autofocus: true,
                                 onChanged: (_) => setLocalState(() {}),
                                 onSubmitted: (_) {
                                   if (hasTimer || !canApply()) return;
@@ -664,7 +663,15 @@ class _SleepUnitChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
+    final rim = AppTheme.transportLiveBorder(brightness);
+    final onChrome = AppTheme.transportChromeOnInner(brightness);
+    final chromeInner = AppTheme.transportChromeInnerFill(brightness);
+    final chipFill = selected
+        ? chromeInner
+        : chromeInner.withValues(
+            alpha: brightness == Brightness.light ? 0.82 : 0.88,
+          );
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
@@ -672,19 +679,34 @@ class _SleepUnitChip extends StatelessWidget {
         height: 40,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: selected
-              ? scheme.surface.withValues(alpha: 0.85)
-              : scheme.surface.withValues(alpha: 0.55),
+          color: chipFill,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: scheme.outline.withValues(alpha: selected ? 0.85 : 0.65),
+            color: selected
+                ? AppTheme.transportChromeTimelineTrack(brightness)
+                    .withValues(alpha: brightness == Brightness.light ? 0.72 : 0.55)
+                : rim.withValues(alpha: brightness == Brightness.light ? 0.55 : 0.42),
+            width: selected && brightness == Brightness.light ? 1.5 : 1,
           ),
         ),
         child: Center(
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: selected ? Colors.black : Colors.transparent,
+                width: 1,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: onChrome,
+                      fontWeight: FontWeight.normal,
+                    ),
+              ),
             ),
           ),
         ),
@@ -716,35 +738,83 @@ class _SleepChipField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
+    final onChrome = AppTheme.transportChromeOnInner(brightness);
+    final chromeInner = AppTheme.transportChromeInnerFill(brightness);
+    final radius = BorderRadius.circular(20);
     return SizedBox(
       width: width,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: scheme.surface.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: scheme.outline.withValues(alpha: 0.7)),
-        ),
-        child: TextField(
-          controller: controller,
-          autofocus: autofocus,
-          textAlign: TextAlign.center,
-          keyboardType: TextInputType.number,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(4),
-          ],
-          onChanged: onChanged,
-          onSubmitted: onSubmitted,
-          decoration: InputDecoration(
-            hintText: hintText ?? label ?? '',
-            isDense: true,
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 12,
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: chromeInner,
+                borderRadius: radius,
+                border: Border.all(
+                  color:
+                      AppTheme.transportChromeTimelineTrack(brightness).withValues(
+                    alpha: brightness == Brightness.light ? 0.75 : 0.55,
+                  ),
+                ),
+              ),
+              child: const SizedBox.expand(),
             ),
-          ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(
+                          alpha: brightness == Brightness.light ? 0.07 : 0.1,
+                        ),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.42],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            TextField(
+              controller: controller,
+              autofocus: autofocus,
+              textAlign: TextAlign.center,
+              keyboardType: TextInputType.number,
+              cursorColor: onChrome,
+              style: TextStyle(
+                color: onChrome,
+                fontWeight: FontWeight.w600,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(4),
+              ],
+              onChanged: onChanged,
+              onSubmitted: onSubmitted,
+              decoration: InputDecoration(
+                hintText: hintText ?? label ?? '',
+                hintStyle: TextStyle(
+                  color: onChrome.withValues(
+                    alpha: brightness == Brightness.light ? 0.48 : 0.45,
+                  ),
+                ),
+                filled: true,
+                fillColor: Colors.transparent,
+                isDense: true,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -764,7 +834,9 @@ class _SleepActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
+    final onChrome = AppTheme.transportChromeOnInner(brightness);
+    final rim = AppTheme.transportChromeTimelineTrack(brightness);
     return InkWell(
       onTap: enabled ? onTap : null,
       borderRadius: BorderRadius.circular(20),
@@ -773,17 +845,18 @@ class _SleepActionButton extends StatelessWidget {
         height: 40,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
+          color: brightness == Brightness.light && enabled
+              ? AppTheme.transportChromeInnerFill(brightness)
+              : null,
           border: Border.all(
-            color: scheme.outline.withValues(alpha: enabled ? 0.9 : 0.45),
-            width: 1.2,
+            color: rim.withValues(alpha: enabled ? 0.72 : 0.35),
+            width: brightness == Brightness.light ? 1.25 : 1,
           ),
         ),
         child: Icon(
           cancelMode ? Icons.close_rounded : Icons.check_rounded,
           size: 26,
-          color: enabled
-              ? scheme.onSurface
-              : scheme.onSurface.withValues(alpha: 0.45),
+          color: enabled ? onChrome : onChrome.withValues(alpha: 0.38),
         ),
       ),
     );
