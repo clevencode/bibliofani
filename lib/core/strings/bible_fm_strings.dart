@@ -31,3 +31,6 @@ const String kBibleFmWebFrSleepA11y = 'Minuteur de sommeil';
 const String kBibleFmWebFrSleepTooltip = 'Arrêter la lecture après…';
 const String kBibleFmWebFrSleepOff = 'Minuteur désactivé';
 const String kBibleFmWebFrSleepInputHint = 'Saisir la durée';
+const String kBibleFmWebFrSleepPlaceholderDigits = '00';
+const String kBibleFmWebFrSleepLabelHeure = 'heure';
+const String kBibleFmWebFrSleepLabelMinute = 'minute';
