@@ -20,6 +20,7 @@ class RadioPlayerPage extends StatelessWidget {
     const webLiveDiameter = 42.0;
     const webAudioH = 40.0;
     final innerH = webCapsuleH - 2 * webPadV;
+    final scheme = Theme.of(context).colorScheme;
     return Semantics(
       container: true,
       label: kBibleFmSemanticsPlayerPage,
@@ -33,11 +34,20 @@ class RadioPlayerPage extends StatelessWidget {
               label: kBibleFmWebFrBackgroundGestureA11y,
               onTap: bibleFmWebBackgroundTapPlayPause,
               onLongPress: bibleFmWebBackgroundLongPressGoLive,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: bibleFmWebBackgroundTapPlayPause,
-                onLongPress: bibleFmWebBackgroundLongPressGoLive,
-                child: const _PageBackground(),
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  onTap: bibleFmWebBackgroundTapPlayPause,
+                  onLongPress: bibleFmWebBackgroundLongPressGoLive,
+                  splashColor: scheme.primary.withValues(alpha: 0.14),
+                  highlightColor: scheme.primary.withValues(alpha: 0.06),
+                  hoverColor: scheme.primary.withValues(alpha: 0.05),
+                  mouseCursor: SystemMouseCursors.click,
+                  canRequestFocus: false,
+                  child: const SizedBox.expand(
+                    child: _PageBackground(),
+                  ),
+                ),
               ),
             ),
             SafeArea(
