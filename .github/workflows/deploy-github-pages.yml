@@ -5,6 +5,9 @@
 # 2) No primeiro deploy: aprove o ambiente «github-pages» se o GitHub pedir.
 #
 # URL: https://clevencode.github.io/biblefm/
+#
+# Lighthouse «Use efficient cache lifetimes»: o GitHub Pages não permite Cache-Control longo nos estáticos.
+# Para nota máxima nesse audit, usa um CDN/proxy (ex. Cloudflare) com cache agressivo em *.js, /canvaskit/*, *.wasm.
 
 name: Deploy web to GitHub Pages
 
@@ -34,7 +37,8 @@ jobs:
           cache: true
 
       - run: flutter pub get
-      - run: flutter build web --release --base-href "/biblefm/"
+      # --no-web-resources-cdn: CanvasKit no mesmo origin → menos cadeia a terceiros e melhor para Lighthouse (rede).
+      - run: flutter build web --release --base-href "/biblefm/" --no-web-resources-cdn --optimization-level=4
 
       - name: Desactivar Jekyll (assets Flutter)
         run: touch build/web/.nojekyll

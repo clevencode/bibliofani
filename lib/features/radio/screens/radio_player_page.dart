@@ -88,7 +88,9 @@ class _WebPlayerScrollBridgeState extends State<_WebPlayerScrollBridge> {
   late final ScrollController _verticalScroll = ScrollController();
   late final ScrollController _horizontalScroll = ScrollController();
   final GlobalKey _measureKey = GlobalKey(debugLabel: 'webPlayerMeasure');
-  BoxConstraints? _lastScheduledConstraints;
+  /// Uma única leitura de layout por frame (evita vários postFrameCallbacks / reflows em cascata).
+  bool _overflowFrameScheduled = false;
+  BoxConstraints? _overflowConstraintsQueued;
   bool _useScrollLayout = false;
 
   @override
@@ -117,7 +119,7 @@ class _WebPlayerScrollBridgeState extends State<_WebPlayerScrollBridge> {
     if (v <= 0.5 && h <= 0.5) {
       setState(() {
         _useScrollLayout = false;
-        _lastScheduledConstraints = null;
+        _overflowConstraintsQueued = null;
       });
     }
   }
@@ -130,17 +132,22 @@ class _WebPlayerScrollBridgeState extends State<_WebPlayerScrollBridge> {
     if (needsScroll) {
       setState(() {
         _useScrollLayout = true;
-        _lastScheduledConstraints = null;
+        _overflowConstraintsQueued = null;
       });
     }
   }
 
   void _scheduleOverflowCheck(BoxConstraints constraints) {
-    if (_lastScheduledConstraints == constraints) return;
-    _lastScheduledConstraints = constraints;
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _onLayoutTick(constraints),
-    );
+    _overflowConstraintsQueued = constraints;
+    if (_overflowFrameScheduled) return;
+    _overflowFrameScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _overflowFrameScheduled = false;
+      final queued = _overflowConstraintsQueued;
+      _overflowConstraintsQueued = null;
+      if (!mounted || queued == null) return;
+      _onLayoutTick(queued);
+    });
   }
 
   Widget _transportColumn({

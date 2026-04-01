@@ -50,61 +50,47 @@
   <link rel="dns-prefetch" href="https://servidor13.brlogic.com">
   <link rel="preconnect" href="https://servidor13.brlogic.com" crossorigin>
 
+  <!-- CanvasKit / moteur Flutter (gstatic) : réduit la chaîne DNS+TLS avant le premier paint moteur. -->
+  <link rel="dns-prefetch" href="https://www.gstatic.com">
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+
+  <link rel="preload" href="flutter_bootstrap.js" as="script">
+
   <link rel="manifest" href="manifest.json">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebSite",
-        "@id": "https://clevencode.github.io/biblefm/#website",
-        "name": "Bible FM",
-        "url": "https://clevencode.github.io/biblefm/",
-        "description": "Lecteur web Bible FM : streaming audio en direct dans le navigateur.",
-        "inLanguage": "fr-FR",
-        "publisher": { "@id": "https://clevencode.github.io/biblefm/#org" }
-      },
-      {
-        "@type": "Organization",
-        "@id": "https://clevencode.github.io/biblefm/#org",
-        "name": "Bible FM",
-        "url": "https://clevencode.github.io/biblefm/"
-      },
-      {
-        "@type": "WebApplication",
-        "name": "Bible FM",
-        "url": "https://clevencode.github.io/biblefm/",
-        "applicationCategory": "EntertainmentApplication",
-        "operatingSystem": "Web",
-        "inLanguage": "fr-FR",
-        "isAccessibleForFree": true,
-        "browserRequirements": "Requires JavaScript. HTML5 audio.",
-        "description": "Lecteur de radio Bible FM pour le web : direct, contrôles audio et minuteur de sommeil.",
-        "offers": {
-          "@type": "Offer",
-          "price": "0",
-          "priceCurrency": "USD"
-        }
-      }
-    ]
-  }
-  </script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://clevencode.github.io/biblefm/#website","name":"Bible FM","url":"https://clevencode.github.io/biblefm/","description":"Lecteur web Bible FM : streaming audio en direct dans le navigateur.","inLanguage":"fr-FR","publisher":{"@id":"https://clevencode.github.io/biblefm/#org"}},{"@type":"Organization","@id":"https://clevencode.github.io/biblefm/#org","name":"Bible FM","url":"https://clevencode.github.io/biblefm/"},{"@type":"WebApplication","name":"Bible FM","url":"https://clevencode.github.io/biblefm/","applicationCategory":"EntertainmentApplication","operatingSystem":"Web","inLanguage":"fr-FR","isAccessibleForFree":true,"browserRequirements":"Requires JavaScript. HTML5 audio.","description":"Lecteur de radio Bible FM pour le web : direct, contrôles audio et minuteur de sommeil.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}]}</script>
 
   <style>
     html, body { height: 100%; margin: 0; }
-    body { background-color: #000000; }
+    body { background-color: #09090b; color: #e4e4e7; font-family: system-ui, sans-serif; }
+    #flutter-boot {
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    #flutter-boot .flutter-boot__title { margin: 0; font-size: 1.25rem; font-weight: 600; letter-spacing: 0.02em; }
+    #flutter-boot .flutter-boot__hint { margin: 0.75rem 0 0; font-size: 0.875rem; opacity: 0.72; }
   </style>
 </head>
 <body>
   <main id="main-content" role="main" aria-label="Lecteur radio Bible FM">
+    <!-- Primeiro paint com texto (FCP/Lighthouse); coberto pelo canvas Flutter quando o motor arranca. -->
+    <div id="flutter-boot" aria-live="polite" aria-busy="true">
+      <p class="flutter-boot__title">Bible FM</p>
+      <p class="flutter-boot__hint">Chargement du lecteur…</p>
+    </div>
     <noscript>
       <h1>Bible FM</h1>
       <p>Écoutez Bible FM dans votre navigateur. Activez JavaScript pour charger le lecteur web.</p>
     </noscript>
   </main>
-  <script src="flutter_bootstrap.js" async></script>
+  <script src="flutter_bootstrap.js" async fetchpriority="high"></script>
 </body>
 </html>
