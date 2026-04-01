@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:meu_app/app/app.dart';
 import 'package:meu_app/radio_home_impl.dart'
     if (dart.library.html) 'package:meu_app/radio_home_html.dart'

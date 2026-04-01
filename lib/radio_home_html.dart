@@ -1,7 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:meu_app/core/theme/app_theme.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:meu_app/features/radio/screens/radio_player_page.dart'
     deferred as radio;
+
+// Mesmas cores que [AppTheme.darkAppBackground] / boot HTML — evita importar Material/AppTheme neste módulo.
+const Color _kLoaderBackground = Color(0xFF09090B);
+const Color _kLoaderErrorFg = Color(0xFFE4E4E7);
 
 /// Web: o leitor corre num **módulo diferido** para menos parse/CPU no arranque
 /// (boas práticas Flutter web — [deferred imports](https://dart.dev/guides/language/language-tour#lazily-loading-a-library)).
@@ -32,34 +35,31 @@ class _DeferredRadioHostState extends State<_DeferredRadioHost> {
   @override
   Widget build(BuildContext context) {
     if (_error != null) {
-      return Scaffold(
-        backgroundColor: AppTheme.darkAppBackground,
-        body: Center(
+      return const ColoredBox(
+        color: _kLoaderBackground,
+        child: Center(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(24),
             child: Text(
               'Impossible de charger le lecteur.\nActualisez la page.',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyLarge,
+              style: TextStyle(
+                color: _kLoaderErrorFg,
+                fontSize: 16,
+                height: 1.35,
+              ),
             ),
           ),
         ),
       );
     }
     if (!_ready) {
-      return Scaffold(
-        backgroundColor: AppTheme.darkAppBackground,
-        body: Center(
+      return ColoredBox(
+        color: _kLoaderBackground,
+        child: Center(
           child: Semantics(
             label: 'Chargement du lecteur',
-            child: SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
+            child: CupertinoActivityIndicator(radius: 14),
           ),
         ),
       );

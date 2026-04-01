@@ -6,6 +6,7 @@ import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/material.dart';
+import 'package:meu_app/core/strings/bible_fm_strings.dart';
 
 /// Tempos centralizados (spinner, esperas de buffer no live).
 const _kWebCanPlayTimeout = Duration(seconds: 10);
@@ -428,6 +429,7 @@ class _WebNativeAudioControlsState extends State<WebNativeAudioControls> {
         ..preload = 'none'
         ..src = url
         ..title = 'Bible FM'
+        ..setAttribute('aria-label', kBibleFmWebFrNativeAudioAriaLabel)
         ..style.width = '100%'
         ..style.height = '100%'
         ..style.maxHeight = '100%'
@@ -477,10 +479,15 @@ class _WebNativeAudioControlsState extends State<WebNativeAudioControls> {
       builder: (context, c) {
         final w = c.maxWidth.isFinite && c.maxWidth > 0 ? c.maxWidth : 520.0;
         final h = widget.controlsHeight;
-        return SizedBox(
-          width: w,
-          height: h,
-          child: const HtmlElementView(viewType: _viewType),
+        return Semantics(
+          container: true,
+          label: kBibleFmWebFrNativeAudioSemanticsLabel,
+          hint: kBibleFmWebFrNativeAudioSemanticsHint,
+          child: SizedBox(
+            width: w,
+            height: h,
+            child: const HtmlElementView(viewType: _viewType),
+          ),
         );
       },
     );

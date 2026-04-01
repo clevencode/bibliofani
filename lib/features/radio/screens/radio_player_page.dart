@@ -88,6 +88,7 @@ class _WebPlayerScrollBridgeState extends State<_WebPlayerScrollBridge> {
   late final ScrollController _verticalScroll = ScrollController();
   late final ScrollController _horizontalScroll = ScrollController();
   final GlobalKey _measureKey = GlobalKey(debugLabel: 'webPlayerMeasure');
+
   /// Uma única leitura de layout por frame (evita vários postFrameCallbacks / reflows em cascata).
   bool _overflowFrameScheduled = false;
   BoxConstraints? _overflowConstraintsQueued;
@@ -802,7 +803,8 @@ class _WebSleepTimerButtonState extends State<_WebSleepTimerButton> {
                                       onTap: () {
                                         if (!canApply()) return;
                                         _startSleepTimer(
-                                            totalMinutesFromFields());
+                                          totalMinutesFromFields(),
+                                        );
                                         Navigator.of(dialogContext).pop();
                                       },
                                     ),

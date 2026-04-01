@@ -77,10 +77,32 @@
     }
     #flutter-boot .flutter-boot__title { margin: 0; font-size: 1.25rem; font-weight: 600; letter-spacing: 0.02em; }
     #flutter-boot .flutter-boot__hint { margin: 0.75rem 0 0; font-size: 0.875rem; opacity: 0.72; }
+    /* Lien « skip » (clavier / lecteurs d’écran) — WCAG 2.x */
+    .skip-to-content {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 2147483647;
+      padding: 0.75rem 1rem;
+      background: #fafafa;
+      color: #09090b;
+      font: inherit;
+      font-weight: 600;
+      text-decoration: underline;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    }
+    .skip-to-content:focus {
+      left: 0.75rem;
+      top: 0.75rem;
+      outline: 3px solid #2383e2;
+      outline-offset: 2px;
+    }
   </style>
 </head>
 <body>
-  <main id="main-content" role="main" aria-label="Lecteur radio Bible FM">
+  <a class="skip-to-content" href="#main-content">Aller au contenu principal</a>
+  <main id="main-content" role="main" aria-label="Lecteur radio Bible FM" tabindex="-1">
     <!-- Primeiro paint com texto (FCP/Lighthouse); coberto pelo canvas Flutter quando o motor arranca. -->
     <div id="flutter-boot" aria-live="polite" aria-busy="true">
       <p class="flutter-boot__title">Bible FM</p>

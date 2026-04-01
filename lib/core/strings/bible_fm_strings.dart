@@ -26,6 +26,16 @@ const String kBibleFmWebFrLiveTooltipPauseToEnable =
 const String kBibleFmWebFrBackgroundGestureA11y =
     'Fond d’écran : touche rapide lecture ou pause ; appui prolongé aller au direct';
 
+// --- Web: lecteur HTML natif (`<audio controls>`) ---
+/// Attribut [aria-label] sur l’élément `<audio>` (lecteurs d’écran).
+const String kBibleFmWebFrNativeAudioAriaLabel =
+    'Bible FM, flux audio en direct';
+/// Semantics Flutter autour du [HtmlElementView] (complement au natif).
+const String kBibleFmWebFrNativeAudioSemanticsLabel =
+    'Contrôles audio du navigateur pour Bible FM';
+const String kBibleFmWebFrNativeAudioSemanticsHint =
+    'Lecture, pause et barre de progression sont fournis par votre navigateur.';
+
 // --- Web: sleep timer ---
 const String kBibleFmWebFrSleepA11y = 'Minuteur de sommeil';
 const String kBibleFmWebFrSleepTooltip = 'Arrêter la lecture après…';
