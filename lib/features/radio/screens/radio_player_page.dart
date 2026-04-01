@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -126,8 +124,7 @@ class _WebPlayerScrollBridgeState extends State<_WebPlayerScrollBridge> {
 
   void _onLayoutTick(BoxConstraints constraints) {
     if (!mounted || _useScrollLayout) return;
-    final box =
-        _measureKey.currentContext?.findRenderObject() as RenderBox?;
+    final box = _measureKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null || !box.hasSize) return;
     final needsScroll = box.size.height > constraints.maxHeight + 0.5;
     if (needsScroll) {
@@ -141,8 +138,9 @@ class _WebPlayerScrollBridgeState extends State<_WebPlayerScrollBridge> {
   void _scheduleOverflowCheck(BoxConstraints constraints) {
     if (_lastScheduledConstraints == constraints) return;
     _lastScheduledConstraints = constraints;
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _onLayoutTick(constraints));
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _onLayoutTick(constraints),
+    );
   }
 
   Widget _transportColumn({
@@ -243,9 +241,7 @@ class _WebPlayerScrollBridgeState extends State<_WebPlayerScrollBridge> {
         );
 
         if (!_useScrollLayout) {
-          return _sleepSwipeWrapper(
-            child: Center(child: paddedColumn),
-          );
+          return _sleepSwipeWrapper(child: Center(child: paddedColumn));
         }
 
         return Scrollbar(
@@ -676,7 +672,8 @@ class _WebSleepTimerButtonState extends State<_WebSleepTimerButton> {
         pageBuilder: (dialogContext, animation, secondaryAnimation) {
           final scheme = Theme.of(dialogContext).colorScheme;
           final brightness = scheme.brightness;
-          final barrierAlpha = brightness == Brightness.dark ? 0.18 : 0.10;
+          // Sem blur: véu só a escurecer (mais opaco que o antigo com desfoque).
+          final barrierAlpha = brightness == Brightness.dark ? 0.80 : 0.38;
           final screenSize = MediaQuery.sizeOf(dialogContext);
           final screenW = screenSize.width;
           final targetW = (screenW - 48).clamp(280.0, 560.0).toDouble();
@@ -707,154 +704,65 @@ class _WebSleepTimerButtonState extends State<_WebSleepTimerButton> {
             Navigator.of(dialogContext).pop();
           }
 
-          final viewInsets = MediaQuery.viewInsetsOf(dialogContext);
-          /// Mesmo padrão que a página do leitor: scroll V/H + Scrollbars quando há overflow.
-          const sleepPillMinH = 100.0;
-
           // Sem Theme() extra: evita outro InheritedWidget durante o pop.
           return Stack(
             clipBehavior: Clip.none,
             children: [
-              // Véu: só visual (IgnorePointer) — toque para fechar fica na camada de scroll.
               Positioned.fill(
-                child: IgnorePointer(
-                  child: ClipRect(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                      child: ColoredBox(
-                        color: scheme.scrim.withValues(alpha: barrierAlpha),
-                      ),
-                    ),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: ColoredBox(
+                    color: scheme.scrim.withValues(alpha: barrierAlpha),
                   ),
                 ),
               ),
-              Positioned.fill(
-                child: Padding(
-                  padding: EdgeInsets.only(bottom: viewInsets.bottom),
-                  child: LayoutBuilder(
-                    builder: (context, c) {
-                      final viewportW = c.maxWidth;
-                      final viewportH = c.maxHeight;
-                      final contentW = math.max(
-                        viewportW,
-                        left + targetW + minScreenPad * 2,
-                      );
-                      final contentH = math.max(
-                        viewportH,
-                        top + sleepPillMinH + minScreenPad,
-                      );
-
-                      return Scrollbar(
-                        thumbVisibility: true,
-                        notificationPredicate: (ScrollNotification n) =>
-                            n.metrics.axis == Axis.vertical,
-                        child: SingleChildScrollView(
-                          physics: const ClampingScrollPhysics(),
-                          child: Scrollbar(
-                            thumbVisibility: true,
-                            notificationPredicate: (ScrollNotification n) =>
-                                n.metrics.axis == Axis.horizontal,
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              physics: const ClampingScrollPhysics(),
-                              child: SizedBox(
-                                width: contentW,
-                                height: contentH,
-                                child: Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    Positioned.fill(
-                                      child: GestureDetector(
-                                        behavior:
-                                            HitTestBehavior.translucent,
-                                        onTap: () {
-                                          FocusManager.instance.primaryFocus
-                                              ?.unfocus();
-                                          Navigator.of(dialogContext).pop();
-                                        },
-                                        child: const SizedBox.expand(),
-                                      ),
-                                    ),
-                                    Positioned(
-                                      left: left,
-                                      top: top,
-                                      width: targetW,
-                                      child: Material(
-                                        type: MaterialType.transparency,
-                                        child: StatefulBuilder(
-                                          builder: (context, setLocalState) {
-                                            final valid = canApply();
-                                            return ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(999),
-                                              child: DecoratedBox(
-                                                decoration:
-                                                    const BoxDecoration(
-                                                  color: Colors.transparent,
-                                                ),
-                                                child: Padding(
-                                                  padding:
-                                                      const EdgeInsets.fromLTRB(
-                                                    8,
-                                                    6,
-                                                    6,
-                                                    6,
-                                                  ),
-                                                  child: Row(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .center,
-                                                    children: [
-                                                      Expanded(
-                                                        child:
-                                                            _SleepHmUnderlineFields(
-                                                          hoursController:
-                                                              hoursController,
-                                                          minutesController:
-                                                              minutesController,
-                                                          hoursFocus:
-                                                              hoursFocus,
-                                                          minutesFocus:
-                                                              minutesFocus,
-                                                          onChanged: () =>
-                                                              setLocalState(
-                                                                  () {}),
-                                                          onHoursSubmitted:
-                                                              () =>
-                                                                  minutesFocus
-                                                                      .requestFocus(),
-                                                          onMinutesSubmitted:
-                                                              applyAndClose,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(
-                                                          width: 2),
-                                                      _SleepActionButton(
-                                                        cancelMode: false,
-                                                        enabled: valid,
-                                                        onTap: () {
-                                                          if (!canApply()) {
-                                                            return;
-                                                          }
-                                                          _startSleepTimer(
-                                                              totalMinutesFromFields());
-                                                          Navigator.of(
-                                                                  dialogContext)
-                                                              .pop();
-                                                        },
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+              Positioned(
+                top: top,
+                left: left,
+                width: targetW,
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: StatefulBuilder(
+                    builder: (context, setLocalState) {
+                      final valid = canApply();
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: DecoratedBox(
+                          decoration: const BoxDecoration(
+                            color: Colors.transparent,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 6, 6, 6),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: _SleepHmUnderlineFields(
+                                    hoursController: hoursController,
+                                    minutesController: minutesController,
+                                    hoursFocus: hoursFocus,
+                                    minutesFocus: minutesFocus,
+                                    onChanged: () => setLocalState(() {}),
+                                    onHoursSubmitted: () =>
+                                        minutesFocus.requestFocus(),
+                                    onMinutesSubmitted: applyAndClose,
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(width: 2),
+                                _SleepActionButton(
+                                  cancelMode: false,
+                                  enabled: valid,
+                                  onTap: () {
+                                    if (!canApply()) return;
+                                    _startSleepTimer(totalMinutesFromFields());
+                                    Navigator.of(dialogContext).pop();
+                                  },
+                                ),
+                              ],
                             ),
                           ),
                         ),

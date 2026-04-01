@@ -15,22 +15,20 @@ const _kWebSkipSeekAfterLiveReload = Duration(seconds: 4);
 
 html.AudioElement? _webBibleFmAudio;
 
-/// Contentor do `HtmlElementView` dos controlos nativos (para ocultar sob véu/modal web).
+/// Contentor do `HtmlElementView` dos controlos nativos (p.ex. `pointer-events` sob modal do sono).
 html.DivElement? _webAudioControlsWrap;
 
 /// URL base do fluxo (registada com o `<audio>`) — appui long no fundo e botão live.
 String? _webLiveStreamBaseUrl;
 
-/// Enquanto o configurador de sono está aberto: esconde a barra nativa que, no Flutter Web,
-/// compõe por cima do Canvas e parece «solta» do resto da cápsula. O áudio continua.
+/// Enquanto o configurador de sono está aberto: mantém a barra nativa **visível** (pré-visualização)
+/// mas **sem toque** (`pointer-events: none`) para a outra camada (véu / temporizador) receber os gestos.
 void bibleFmWebSetSleepConfiguratorOpen(bool open) {
   final w = _webAudioControlsWrap;
   if (w == null) return;
   if (open) {
-    w.style.opacity = '0';
     w.style.pointerEvents = 'none';
   } else {
-    w.style.opacity = '';
     w.style.pointerEvents = '';
   }
 }
