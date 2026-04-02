@@ -102,7 +102,7 @@
       height: 100%;
       width: 42%;
       border-radius: 999px;
-      background: linear-gradient(90deg, #1a6fd4 0%, #3d9ef0 50%, #7ec0ff 100%);
+      background: rgba(255, 255, 255, 0.92);
       animation: flutter-boot-progress 1.35s ease-in-out infinite;
       will-change: transform;
     }
@@ -139,12 +139,12 @@
       outline: 3px solid #2383e2;
       outline-offset: 2px;
     }
-    /* Souris / trackpad : cercle blanc simple (trait, sans ombre ni halo). */
+    /* Souris / trackpad : petit point blanc plein (sans contour). */
     @media (pointer: fine) {
       html, body, #flutter-boot, main#main-content,
       flt-glass-pane,
       flutter-view {
-        cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='5.5' fill='none' stroke='%23ffffff' stroke-width='1.25'/%3E%3C/svg%3E") 12 12, auto !important;
+        cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='2.75' fill='%23ffffff'/%3E%3C/svg%3E") 8 8, auto !important;
       }
     }
   </style>

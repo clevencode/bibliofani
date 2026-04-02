@@ -878,13 +878,13 @@ class _WebSleepTimerButtonState extends State<_WebSleepTimerButton> {
                 math.max(safe.left, safe.right),
               );
               final screenW = screenSize.width;
-              final horizontalGutter = math.max(
-                48.0,
-                safe.left + safe.right + 24.0,
+              final layoutSpec = _WebTransportLayoutSpec.compute(
+                layoutW: screenW,
+                layoutH: screenSize.height.isFinite ? screenSize.height : 0,
+                textScaler: mq.textScaler,
               );
-              final targetW = (screenW - horizontalGutter)
-                  .clamp(280.0, 560.0)
-                  .toDouble();
+              // Mesma largura útil que a cápsula principal (barra de transporte).
+              var targetW = layoutSpec.maxContentWidth;
 
               final capsuleBox =
                   _kWebTransportCapsule.currentContext?.findRenderObject()
@@ -894,6 +894,7 @@ class _WebSleepTimerButtonState extends State<_WebSleepTimerButton> {
               if (capsuleBox != null &&
                   capsuleBox.hasSize &&
                   capsuleBox.attached) {
+                targetW = capsuleBox.size.width;
                 final origin = capsuleBox.localToGlobal(Offset.zero);
                 top = origin.dy + capsuleBox.size.height + gapBelowTransport;
                 left = origin.dx + (capsuleBox.size.width - targetW) / 2;

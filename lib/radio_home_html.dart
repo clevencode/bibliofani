@@ -1,8 +1,8 @@
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/widgets.dart';
 import 'package:meu_app/features/radio/screens/radio_player_page.dart'
     deferred as radio;
 
-// Alinhado ao fundo preto do [index.html] / manifest — evita importar Material/AppTheme.
+// Erro: mesmo fundo que [index.html] — evita importar Material/AppTheme.
 const Color _kLoaderBackground = Color(0xFF000000);
 const Color _kLoaderErrorFg = Color(0xFFE4E4E7);
 
@@ -52,15 +52,11 @@ class _DeferredRadioHostState extends State<_DeferredRadioHost> {
         ),
       );
     }
+    // Sem segundo ecrã nem spinner: o splash HTML (#flutter-boot) cobre o arranque até ao primeiro frame.
     if (!_ready) {
-      return ColoredBox(
-        color: _kLoaderBackground,
-        child: Center(
-          child: Semantics(
-            label: 'Chargement du lecteur',
-            child: CupertinoActivityIndicator(radius: 14),
-          ),
-        ),
+      return const ColoredBox(
+        color: Color(0x00000000),
+        child: SizedBox.expand(),
       );
     }
     return radio.RadioPlayerPage();
