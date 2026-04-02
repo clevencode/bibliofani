@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:meu_app/features/radio/screens/radio_player_page.dart'
     deferred as radio;
@@ -24,10 +26,15 @@ class _DeferredRadioHostState extends State<_DeferredRadioHost> {
   @override
   void initState() {
     super.initState();
-    radio.loadLibrary().then((_) {
-      if (mounted) setState(() => _ready = true);
-    }).catchError((Object e, StackTrace _) {
-      if (mounted) setState(() => _error = e);
+    // Após o primeiro frame: o splash HTML pinta primeiro; loadLibrary não bloqueia o build inicial.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      scheduleMicrotask(() {
+        radio.loadLibrary().then((_) {
+          if (mounted) setState(() => _ready = true);
+        }).catchError((Object e, StackTrace _) {
+          if (mounted) setState(() => _error = e);
+        });
+      });
     });
   }
 

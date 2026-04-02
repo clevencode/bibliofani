@@ -6,10 +6,6 @@ import 'package:meu_app/core/theme/app_spacing.dart';
 /// **Barra de reprodução:** cápsula com **fundo transparente** e **contorno**; sem preenchimento opaco.
 /// Tipografia Material 3 (sem fontes de rede na web). [AppSpacing]: grelha 8pt.
 abstract final class AppTheme {
-  /// Transição claro ↔ escuro: um pouco mais longa, curva tipo Material 3.
-  static const Duration themeCrossfadeDuration = Duration(milliseconds: 420);
-  static const Curve themeCrossfadeCurve = Curves.easeInOutCubicEmphasized;
-
   /// Cantos de controlos (botões, campos).
   static const double notionControlRadius = 4;
 
@@ -34,11 +30,7 @@ abstract final class AppTheme {
   static const Color _premiumDarkError = Color(0xFFFCA5A5);
   static const Color _premiumDarkErrorContainer = Color(0xFF450A0A);
 
-  // —— Light — barra de áudio / transporte (acento primário no tempo; cápsula = só contorno) ——
-  static const Color _premiumLightChromeInner = Color(0xFFF3F1EE);
-  static const Color _premiumLightChromeOnInner = Color(0xFF1C1917);
-  static const Color _premiumLightTimelineTrack = Color(0xFFE6E4E0);
-  static const Color _premiumLightTimelineProgress = Color(0xFF1D6FD4);
+  // —— Light — contorno da cápsula de transporte ——
   static const Color _premiumLightLiveBorder = Color(0xFFD6D3CD);
 
   /// Decoração unificada da cápsula live + `<audio>` + sono: transparente, só traço.
@@ -63,9 +55,6 @@ abstract final class AppTheme {
   static const Color _notionInkSecondary = Color(0xFF787774);
   static const Color _notionBlue = Color(0xFF2383E2);
   static const Color _notionRed = Color(0xFFEB5757);
-
-  /// Fundo principal em modo escuro (premium minimal — carvão, não preto puro).
-  static const Color darkAppBackground = _premiumDarkBg;
 
   /// Fundo claro: cinzento quente tipo sidebar + página (sem gradiente forte).
   static const LinearGradient notionLightBackgroundGradient = LinearGradient(
@@ -425,32 +414,11 @@ abstract final class AppTheme {
     );
   }
 
-  static ThemeData get light => _baseTheme(Brightness.light);
-
   static ThemeData get dark => _baseTheme(Brightness.dark);
-
-  /// Play: só preto/branco (tinta em claro, branco em escuro — como botões neutros Notion).
-  static Color transportPlayFill(Brightness brightness) =>
-      brightness == Brightness.light ? _notionInk : Colors.white;
-
-  static Color transportPlayIcon(Brightness brightness) =>
-      brightness == Brightness.light ? Colors.white : _notionInk;
-
-  static Color transportLiveIcon(Brightness brightness) => Colors.white;
-
-  /// Disco **live**: mesmo preenchimento que a cápsula interior estilo Chrome ([transportChromeInnerFill]).
-  static Color liveStreamDiscFill(Brightness brightness) =>
-      transportChromeInnerFill(brightness);
 
   /// Ícone / spinner no disco live e resto da cápsula (live, sono): **branco**.
   static Color liveStreamBroadcastIconColor(Brightness brightness) =>
       Colors.white;
-
-  /// Anel do disco — combina com o trilho do slider Chrome ([transportChromeTimelineTrack]).
-  static Color liveStreamDiscRing(Brightness brightness) =>
-      transportChromeTimelineTrack(brightness).withValues(
-        alpha: brightness == Brightness.dark ? 0.75 : 0.85,
-      );
 
   /// Hover / splash do botão live (ícone branco → rebordo em branco suave).
   static Color liveStreamButtonHover(Brightness brightness) =>
@@ -470,111 +438,4 @@ abstract final class AppTheme {
       transportLiveBorder(brightness).withValues(
         alpha: brightness == Brightness.dark ? 0.35 : 0.88,
       );
-
-  /// Poço interior do disco live / contraste com fundo da página (cápsula externa é transparente).
-  static Color transportChromeInnerFill(Brightness brightness) =>
-      brightness == Brightness.dark
-          ? const Color(0xFFEFEFEF)
-          : _premiumLightChromeInner;
-
-  /// Tinta escura sobre [transportChromeInnerFill] (p.ex. texto nativo quando aplicável).
-  static Color transportChromeOnInner(Brightness brightness) =>
-      brightness == Brightness.dark
-          ? const Color(0xFF141414)
-          : _premiumLightChromeOnInner;
-
-  /// Trilho fino do slider temporal (claro = neutro arejado).
-  static Color transportChromeTimelineTrack(Brightness brightness) =>
-      brightness == Brightness.dark
-          ? const Color(0xFFCFCFCF)
-          : _premiumLightTimelineTrack;
-
-  static Color transportChromeTimelineProgress(Brightness brightness) =>
-      brightness == Brightness.dark
-          ? const Color(0xFF9A9A9A)
-          : _premiumLightTimelineProgress;
-
-  /// Círculo do indicador de pulso em **en direct** (a reproduzir).
-  static Color transportLivePulseColor(Brightness brightness) =>
-      brightness == Brightness.light
-          ? const Color(0xFF0F7B6C)
-          : const Color(0xFF86EFAC);
-
-  /// Tom **âmbar / amarelo** suave (pílula de estado, indicador «en écoute»).
-  static Color transportDeferredPulseColor(Brightness brightness) =>
-      brightness == Brightness.light
-          ? const Color(0xFFC2760A)
-          : const Color(0xFFE8C547);
-
-  /// Vermelho Notion suave para **En pause** (indicador + pílula), alinhado a [_notionRed] / erro.
-  static Color transportPausedPulseColor(Brightness brightness) =>
-      brightness == Brightness.light
-          ? _notionRed
-          : const Color(0xFFFF8B7B);
-
-  /// Fundo da pílula «En direct / Différé / En pause»: lavado suave com a mesma família cromática do círculo.
-  /// [neutralPause]: «En pause» voluntário — cinza neutro (sem tom de erro).
-  static Color statusPillBackground({
-    required ColorScheme scheme,
-    required Brightness brightness,
-    required bool isListening,
-    required bool isLiveMode,
-    bool neutralPause = false,
-  }) {
-    final isDark = brightness == Brightness.dark;
-    if (!isListening) {
-      if (neutralPause) {
-        return Color.lerp(
-          scheme.surfaceContainerLow,
-          scheme.outline,
-          isDark ? 0.22 : 0.14,
-        )!;
-      }
-      return Color.lerp(
-        scheme.surfaceContainerLow,
-        transportPausedPulseColor(brightness),
-        isDark ? 0.28 : 0.11,
-      )!;
-    }
-    if (isLiveMode) {
-      return Color.lerp(
-        scheme.surfaceContainerHighest,
-        transportLivePulseColor(brightness),
-        isDark ? 0.24 : 0.11,
-      )!;
-    }
-    return Color.lerp(
-      scheme.surfaceContainerHighest,
-      transportDeferredPulseColor(brightness),
-      isDark ? 0.26 : 0.12,
-    )!;
-  }
-
-  /// Borda da pílula de estado: eco do verde (live), âmbar (écoute) ou vermelho (pause).
-  static Color statusPillBorder({
-    required ColorScheme scheme,
-    required Brightness brightness,
-    required bool isListening,
-    required bool isLiveMode,
-    bool neutralPause = false,
-  }) {
-    final isDark = brightness == Brightness.dark;
-    final edge = scheme.outline.withValues(alpha: isDark ? 0.75 : 0.88);
-    if (!isListening) {
-      if (neutralPause) {
-        return scheme.outline.withValues(alpha: isDark ? 0.52 : 0.58);
-      }
-      return Color.lerp(edge, transportPausedPulseColor(brightness), 0.42)!;
-    }
-    if (isLiveMode) {
-      return Color.lerp(edge, transportLivePulseColor(brightness), 0.42)!;
-    }
-    return Color.lerp(edge, transportDeferredPulseColor(brightness), 0.40)!;
-  }
-
-  static Color footerSurfaceColor(ColorScheme scheme) =>
-      Color.lerp(scheme.surface, scheme.surfaceContainerLowest, 0.72)!;
-
-  static Color darkHoverOverlay(ColorScheme scheme) =>
-      footerSurfaceColor(scheme).withValues(alpha: 0.22);
 }

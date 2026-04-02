@@ -275,38 +275,40 @@ class _WebPlayerScrollBridgeState extends State<_WebPlayerScrollBridge> {
       children: [
         _WebRealtimeFeedbackLine(useSmallerType: spec.feedbackUseSmallerType),
         SizedBox(height: spec.feedbackBelowGap),
-        DecoratedBox(
-          key: _kWebTransportCapsule,
-          decoration: AppTheme.transportCapsuleDecoration(
-            brightness: brightness,
-            radius: spec.capsuleHeight / 2,
-          ),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              spec.padH,
-              spec.padV,
-              spec.padH,
-              spec.padV,
+        RepaintBoundary(
+          child: DecoratedBox(
+            key: _kWebTransportCapsule,
+            decoration: AppTheme.transportCapsuleDecoration(
+              brightness: brightness,
+              radius: spec.capsuleHeight / 2,
             ),
-            child: SizedBox(
-              height: innerH,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _WebLiveStreamButton(diameter: spec.liveDiameter),
-                  SizedBox(width: spec.gapLiveAudio),
-                  Expanded(
-                    child: WebNativeAudioControls(
-                      streamUrl: kBibleFmLiveStreamUrl,
-                      controlsHeight: spec.audioControlsHeight,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                spec.padH,
+                spec.padV,
+                spec.padH,
+                spec.padV,
+              ),
+              child: SizedBox(
+                height: innerH,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    _WebLiveStreamButton(diameter: spec.liveDiameter),
+                    SizedBox(width: spec.gapLiveAudio),
+                    Expanded(
+                      child: WebNativeAudioControls(
+                        streamUrl: kBibleFmLiveStreamUrl,
+                        controlsHeight: spec.audioControlsHeight,
+                      ),
                     ),
-                  ),
-                  SizedBox(width: spec.gapAudioSleep),
-                  _WebSleepTimerButton(
-                    key: _kWebSleepTimerButtonKey,
-                    controlHeight: innerH,
-                  ),
-                ],
+                    SizedBox(width: spec.gapAudioSleep),
+                    _WebSleepTimerButton(
+                      key: _kWebSleepTimerButtonKey,
+                      controlHeight: innerH,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1005,8 +1007,7 @@ class _WebSleepTimerButtonState extends State<_WebSleepTimerButton> {
                                           ),
                                         ),
                                         const SizedBox(width: 2),
-                                        _SleepActionButton(
-                                          cancelMode: false,
+                                        _SleepApplyButton(
                                           enabled: valid,
                                           onTap: () {
                                             if (!canApply()) return;
@@ -1496,14 +1497,13 @@ class _SleepHmUnderlineFieldsState extends State<_SleepHmUnderlineFields> {
   }
 }
 
-class _SleepActionButton extends StatelessWidget {
-  const _SleepActionButton({
-    required this.cancelMode,
+/// Confirmar temporizador (task_alt + cor primária).
+class _SleepApplyButton extends StatelessWidget {
+  const _SleepApplyButton({
     this.enabled = true,
     required this.onTap,
   });
 
-  final bool cancelMode;
   final bool enabled;
   final VoidCallback onTap;
 
@@ -1511,40 +1511,12 @@ class _SleepActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final brightness = scheme.brightness;
-    final iconInk = AppTheme.liveStreamBroadcastIconColor(brightness);
     final mutedRing =
         AppTheme.transportLiveBorder(brightness).withValues(alpha: 0.28);
-
-    late final Color ringColor;
-    late final Color iconColor;
-    late final IconData iconData;
-    late final double iconSize;
-    late final Color hoverColor;
-    late final Color splashColor;
-
-    if (cancelMode) {
-      ringColor =
-          enabled ? AppTheme.transportCapsuleOutline(brightness) : mutedRing;
-      iconColor = enabled ? iconInk : iconInk.withValues(alpha: 0.38);
-      iconData = Icons.close_rounded;
-      iconSize = 20;
-      hoverColor =
-          enabled ? AppTheme.liveStreamButtonHover(brightness) : Colors.transparent;
-      splashColor =
-          enabled ? AppTheme.liveStreamButtonSplash(brightness) : Colors.transparent;
-    } else {
-      // Confirmar: ícone Material (task_alt, estilo Google) + cor primária.
-      ringColor = enabled ? scheme.primary.withValues(alpha: 0.9) : mutedRing;
-      iconColor =
-          enabled ? scheme.primary : scheme.onSurface.withValues(alpha: 0.38);
-      iconData = Icons.task_alt;
-      iconSize = 22;
-      hoverColor =
-          enabled ? scheme.primary.withValues(alpha: 0.14) : Colors.transparent;
-      splashColor =
-          enabled ? scheme.primary.withValues(alpha: 0.24) : Colors.transparent;
-    }
-
+    final ringColor =
+        enabled ? scheme.primary.withValues(alpha: 0.9) : mutedRing;
+    final iconColor =
+        enabled ? scheme.primary : scheme.onSurface.withValues(alpha: 0.38);
     const dim = 36.0;
     final radius = dim / 2;
 
@@ -1553,8 +1525,10 @@ class _SleepActionButton extends StatelessWidget {
       child: InkWell(
         onTap: enabled ? onTap : null,
         borderRadius: BorderRadius.circular(radius),
-        hoverColor: hoverColor,
-        splashColor: splashColor,
+        hoverColor:
+            enabled ? scheme.primary.withValues(alpha: 0.14) : Colors.transparent,
+        splashColor:
+            enabled ? scheme.primary.withValues(alpha: 0.24) : Colors.transparent,
         highlightColor: enabled ? null : Colors.transparent,
         child: Ink(
           width: dim,
@@ -1565,8 +1539,8 @@ class _SleepActionButton extends StatelessWidget {
             border: Border.all(color: ringColor, width: 1),
           ),
           child: Icon(
-            iconData,
-            size: iconSize,
+            Icons.task_alt,
+            size: 22,
             color: iconColor,
           ),
         ),
