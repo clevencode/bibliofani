@@ -1,51 +1,95 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
-
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-# Pacotes locais em path: a resolução fica no pubspec.lock da raiz.
-packages/**/pubspec.lock
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# =============================================
+# Flutter / Dart
+# =============================================
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
+**/doc/api/
+.build/
+.buildlog/
+coverage/
+*.lcov
+
+# Pacotes locais em path: a resolução fica no pubspec.lock da raiz.
+packages/**/pubspec.lock
+
+# Builds do Flutter — ignorar por completo (Vercel / CI geram com flutter build web).
+# Opcional, se um dia quiseres versionar artefactos web: usar /build/* + !/build/web/**
 /build/
-/coverage/
 
-# Symbolication related
-app.*.symbols
+# =============================================
+# Android
+# =============================================
+/android/app/debug/
+/android/app/profile/
+/android/app/release/
+/android/.gradle/
+/android/app/google-services.json
 
-# Obfuscation related
-app.*.map.json
+# =============================================
+# iOS
+# =============================================
+/ios/Flutter/.last_build_id
+/ios/Pods/
+/ios/.symlinks/
+/ios/Flutter/App.framework/
+/ios/Flutter/Flutter.podspec
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# =============================================
+# IDEs e editores
+# =============================================
+.idea/
+*.iml
+*.ipr
+*.iws
 
-# Vercel (CLI link local; pasta de staging opcional para deploy manual)
+.vscode/
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+
+# =============================================
+# Sistema e diversos
+# =============================================
+.DS_Store
+*.log
+*.swp
+*.swo
+*.class
+*.pyc
+*.pyo
+.atom/
+.history/
+.svn/
+.swiftpm/
+migrate_working_dir/
+.migrate_working_dir/
+
+# =============================================
+# Ficheiros sensíveis
+# =============================================
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+*.secrets
+
+# =============================================
+# Deploy e ferramentas (Vercel)
+# =============================================
 .vercel
+/.vercel
 /deploy-vercel/
+.vercel.json
+
+# =============================================
+# Symbolication e ofuscação
+# =============================================
+*.symbols
+app.*.symbols
+*.map.json
+app.*.map.json
+*.app.dSYM.zip
