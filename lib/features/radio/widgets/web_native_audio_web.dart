@@ -28,7 +28,7 @@ const double _kWebScrubLiveCeilingEpsilonSec = 0.12;
 
 /// Janela lógica junto ao live: a app só considera os últimos [N] s de média para seeks, clamps e sync.
 /// O browser pode manter mais dados em memória; sem MSE não se «apaga» o buffer real — isto limita trabalho e UI.
-const double _kWebLogicalBufferWindowSec = 30.0;
+const double _kWebLogicalBufferWindowSec = 10.0;
 
 html.AudioElement? _webBibleFmAudio;
 
@@ -41,10 +41,10 @@ String? _webLiveStreamBaseUrl;
 /// Estilos para `::-webkit-media-controls-*`: fundo do painel nativo transparente (contorno fica no Flutter).
 const _kAudioChromeStyleId = 'bibliofani-audio-chrome-style-v3';
 
-/// Script injectado: em **pause**, o getter `duration` do `<audio class="bibliofani-native-audio">`
-/// devolve `buffered.end − ε` (alinhado com [_kWebScrubLiveCeilingEpsilonSec]), para o Chrome mostrar
-/// *posição / bordo live* sem `dart:js_util` (sincronização por intervalo no próprio JS).
-const _kLiveDurationHookScriptId = 'bibliofani-duration-hook-script-v2';
+/// Script injectado: o getter `duration` do `<audio class="bibliofani-native-audio">` devolve um valor
+/// **finito** a partir de `buffered.end` (alinhado a [_kWebScrubLiveCeilingEpsilonSec]) em **play e pause**.
+/// Assim a barra nativa do Chrome não permite arrastar «além» do bordo live (`duration` infinito no HLS/Icecast).
+const _kLiveDurationHookScriptId = 'bibliofani-duration-hook-script-v3';
 
 void _ensureLiveDurationHookScript() {
   if (html.document.getElementById(_kLiveDurationHookScriptId) != null) {
@@ -55,7 +55,20 @@ void _ensureLiveDurationHookScript() {
     ..type = 'text/javascript'
     ..text = r'''
 (function(w) {
-  if (w.__bfmLiveDurTimer) return;
+  var HOOK_VER = 3;
+  if (w.__bfmLiveDurHookVer === HOOK_VER) return;
+  if (w.__bfmLiveDurTimer) {
+    clearInterval(w.__bfmLiveDurTimer);
+    w.__bfmLiveDurTimer = null;
+  }
+  w.__bfmLiveDurHookVer = HOOK_VER;
+  try {
+    var oldA = document.querySelector('.bibliofani-native-audio');
+    if (oldA && oldA.__bfmDurationHooked) {
+      delete oldA.duration;
+      oldA.__bfmDurationHooked = false;
+    }
+  } catch (e0) {}
   var eps = 0.12;
   function bufEnd(a) {
     try {
@@ -69,14 +82,20 @@ void _ensureLiveDurationHookScript() {
     var nativeGet = desc && desc.get;
     if (!nativeGet) return;
     audio.__bfmDurationHooked = true;
-    audio.__bfmPausedLiveEnd = NaN;
     Object.defineProperty(audio, 'duration', {
       get: function() {
-        var v = this.__bfmPausedLiveEnd;
-        if (this.paused && typeof v === 'number' && v === v && v > 0) {
-          return v;
+        var end = bufEnd(this);
+        if (!(end > 0) || end !== end) {
+          try { return nativeGet.call(this); } catch (e) { return NaN; }
         }
-        return nativeGet.call(this);
+        var ct = 0;
+        try { ct = Number(this.currentTime); } catch (e2) {}
+        if (ct !== ct) ct = 0;
+        var floor = end - eps;
+        if (!(floor > 0)) {
+          try { return nativeGet.call(this); } catch (e3) { return end; }
+        }
+        return Math.min(end, Math.max(floor, ct));
       },
       configurable: true,
       enumerable: true
@@ -86,19 +105,8 @@ void _ensureLiveDurationHookScript() {
     var a = document.querySelector('.bibliofani-native-audio');
     if (!a) return;
     install(a);
-    if (!a.__bfmDurationHooked) return;
-    if (!a.paused) {
-      a.__bfmPausedLiveEnd = NaN;
-      return;
-    }
-    var end = bufEnd(a);
-    if (!(end > 0) || end !== end) {
-      a.__bfmPausedLiveEnd = NaN;
-      return;
-    }
-    var lim = end - eps;
-    a.__bfmPausedLiveEnd = lim > 0 ? lim : NaN;
   }
+  tick();
   w.__bfmLiveDurTimer = setInterval(tick, 350);
 })(window);
 ''';
@@ -359,8 +367,8 @@ double? _bufferedStartSec(html.AudioElement a) {
   return b.start(0);
 }
 
-/// Início da janela lógica: `max(buffered.start, end − 30s)` quando o span excede 30 s.
-/// Simula «só guardar ~30 s úteis» para lógica da app (sem cortar RAM do browser).
+/// Início da janela lógica: `max(buffered.start, end − 10s)` quando o span excede 10 s.
+/// Simula «só guardar ~10 s úteis» para lógica da app (sem cortar RAM do browser).
 double? _logicalBufferedStartSec(html.AudioElement a) {
   final end = _bufferedEndSec(a);
   final start = _bufferedStartSec(a);
@@ -468,8 +476,8 @@ void _onWebAudioSeeked(html.AudioElement a) {
   _syncNativeAudioElapsedDisplay();
 }
 
-/// Expõe o tempo de sessão no `currentTime` do `<audio controls>` ; em **pause**, o getter `duration`
-/// é sobrescrito (hook JS) para o bordo do buffer ≈ instant live, para o Chrome mostrar *posição / direct*.
+/// Expõe o tempo de sessão no `currentTime` do `<audio controls>` ; o hook JS de `duration` (play e pause)
+/// fixa um teto finito em `buffered.end`, para o Chrome mostrar *posição / direct* e limitar o scrub ao live.
 void _syncNativeAudioElapsedDisplay() {
   final a = _webBibleFmAudio;
   if (a == null) return;

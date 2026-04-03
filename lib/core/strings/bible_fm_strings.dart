@@ -18,9 +18,9 @@ const String kBibleFmWebFrPauseLiveDriftTitle =
 const String kBibleFmWebFrPauseLiveDriftHint =
     'Le direct continue sur le serveur. Reprenez la lecture ou rapprochez-vous du « maintenant » sur la barre.';
 
-/// Rappel d’interaction (barre HTML native + sauts ±30 s, fenêtre logique ~30 s près du direct).
+/// Rappel d’interaction (barre HTML native + sauts ±10 s, fenêtre logique ~10 s près du direct).
 const String kBibleFmWebFrListenBufferScrubHint =
-    'Glissez ou utilisez ±30 s pour reculer ou rattraper le direct (environ 30 secondes près du « maintenant », selon le navigateur). Au-delà, retour au direct.';
+    'Glissez ou utilisez ±10 s pour reculer ou rattraper le direct (environ 10 secondes près du « maintenant », selon le navigateur). Au-delà, retour au direct.';
 const String kBibleFmWebFrLiveA11yReloading = 'Reconnexion au direct…';
 const String kBibleFmWebFrLiveTooltipReloading = 'Connexion au flux en direct…';
 const String kBibleFmWebFrLiveA11yActive = 'Direct actif';
@@ -56,8 +56,8 @@ const String kBibleFmWebFrSleepPlaceholderDigits = '00';
 const String kBibleFmWebFrSleepLabelHeure = 'heure';
 const String kBibleFmWebFrSleepLabelMinute = 'minute';
 
-// --- Web: saut ±30 s (barre sous la capsule) ---
-const String kBibleFmWebFrSeekBack30Semantics = 'Reculer de 30 secondes';
-const String kBibleFmWebFrSeekBack30Tooltip = 'Reculer de 30 secondes';
-const String kBibleFmWebFrSeekForward30Semantics = 'Avancer de 30 secondes';
-const String kBibleFmWebFrSeekForward30Tooltip = 'Avancer de 30 secondes';
+// --- Web: saut ±10 s (barre sous la capsule) ---
+const String kBibleFmWebFrSeekBack10Semantics = 'Reculer de 10 secondes';
+const String kBibleFmWebFrSeekBack10Tooltip = 'Reculer de 10 secondes';
+const String kBibleFmWebFrSeekForward10Semantics = 'Avancer de 10 secondes';
+const String kBibleFmWebFrSeekForward10Tooltip = 'Avancer de 10 secondes';

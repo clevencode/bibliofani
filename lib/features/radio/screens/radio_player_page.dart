@@ -328,7 +328,7 @@ class _WebPlayerScrollBridgeState extends State<_WebPlayerScrollBridge> {
           ),
         ),
         SizedBox(height: spec.skipRowTopGap),
-        _WebSkipThirtyRow(
+        _WebSkipTenRow(
           brightness: brightness,
           pillHeight: spec.skipPillHeight,
           pillGap: spec.skipPillGap,
@@ -447,9 +447,9 @@ class _WebPlayerScrollBridgeState extends State<_WebPlayerScrollBridge> {
   }
 }
 
-/// Deux pastilles ±30 s sous la capsule de transport (même style de contour).
-class _WebSkipThirtyRow extends StatelessWidget {
-  const _WebSkipThirtyRow({
+/// Deux pastilles ±10 s sous la capsule de transport (même style de contour).
+class _WebSkipTenRow extends StatelessWidget {
+  const _WebSkipTenRow({
     required this.brightness,
     required this.pillHeight,
     required this.pillGap,
@@ -543,24 +543,24 @@ class _WebSkipThirtyRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             pill(
-              semantics: kBibleFmWebFrSeekBack30Semantics,
-              tooltip: kBibleFmWebFrSeekBack30Tooltip,
-              onTap: () => bibleFmWebSeekRelativeSeconds(-30),
+              semantics: kBibleFmWebFrSeekBack10Semantics,
+              tooltip: kBibleFmWebFrSeekBack10Tooltip,
+              onTap: () => bibleFmWebSeekRelativeSeconds(-10),
               rowChildren: [
-                Text('30s', style: labelStyle),
+                Text('10s', style: labelStyle),
                 SizedBox(width: gapTextIcon),
                 Icon(Icons.replay_rounded, size: iconSize, color: ink),
               ],
             ),
             SizedBox(width: pillGap),
             pill(
-              semantics: kBibleFmWebFrSeekForward30Semantics,
-              tooltip: kBibleFmWebFrSeekForward30Tooltip,
-              onTap: () => bibleFmWebSeekRelativeSeconds(30),
+              semantics: kBibleFmWebFrSeekForward10Semantics,
+              tooltip: kBibleFmWebFrSeekForward10Tooltip,
+              onTap: () => bibleFmWebSeekRelativeSeconds(10),
               rowChildren: [
                 Icon(Icons.forward_rounded, size: iconSize, color: ink),
                 SizedBox(width: gapTextIcon),
-                Text('30s', style: labelStyle),
+                Text('10s', style: labelStyle),
               ],
             ),
           ],
