@@ -29,8 +29,8 @@ const double _kWebScrubLiveCeilingEpsilonSec = 0.12;
 /// Tolerância numérica: acima disto em relação ao teto live → seek imediato ao teto (barra / buffer).
 const double _kWebLiveCeilingOverrunSnapSec = 1e-5;
 
-/// Enquanto «em directo» e a reproduzir, revalida o teto live a este ritmo (timeupdate sozinho pode ser ~250 ms).
-const Duration _kWebLiveCeilingGuardInterval = Duration(milliseconds: 32);
+/// Enquanto «em directo» e a reproduzir, revalida o teto live a este ritmo (`timeupdate` no Chrome costuma ~250 ms).
+const Duration _kWebLiveCeilingGuardInterval = Duration(milliseconds: 16);
 
 /// Janela lógica junto ao live: a app só considera os últimos [N] s de média para seeks, clamps e sync.
 /// O browser pode manter mais dados em memória; sem MSE não se «apaga» o buffer real — isto limita trabalho e UI.
@@ -571,12 +571,14 @@ void _syncNativeAudioElapsedDisplay() {
       return;
     }
 
+    // Sempre antes da coalescência: ultrapassar o teto live deve corrigir-se já (a coalescência só evita
+    // o alinhamento ao relógio de sessão a disputar com o reload, não o limite físico do buffer).
+    _webClampPlayingCurrentTimeToLiveCeiling(a);
+
     if (_webSkipSeekCoalesceUntil != null &&
         DateTime.now().isBefore(_webSkipSeekCoalesceUntil!)) {
       return;
     }
-
-    _webClampPlayingCurrentTimeToLiveCeiling(a);
 
     final bufEndPlaying = _bufferedEndSec(a);
     if (bufEndPlaying != null) {
@@ -922,6 +924,10 @@ class _WebNativeAudioControlsState extends State<WebNativeAudioControls> {
       });
       a.onCanPlay.listen((_) {
         bibleFmWebBuffering.value = false;
+        final el = _webBibleFmAudio;
+        if (el != null && !el.paused && !el.seeking) {
+          _webClampPlayingCurrentTimeToLiveCeiling(el);
+        }
       });
       a.onPlaying.listen((_) {
         bibleFmWebBuffering.value = false;
@@ -931,6 +937,9 @@ class _WebNativeAudioControlsState extends State<WebNativeAudioControls> {
           bibleFmWebLiveEdgeActive.value = false;
         } else {
           _webUpdateLiveEdgeFromBufferPosition(a);
+        }
+        if (!a.paused && !a.seeking) {
+          _webClampPlayingCurrentTimeToLiveCeiling(a);
         }
       });
       void onProgressClamp(html.Event _) {
