@@ -3,26 +3,6 @@
   "installCommand": "echo 'Flutter: skip npm install'",
   "buildCommand": "bash tool/vercel_build.sh",
   "outputDirectory": "build/web",
-  "redirects": [
-    {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "bibliofani.com" }],
-      "destination": "https://bibleco.com/:path*",
-      "permanent": true
-    },
-    {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "www.bibliofani.com" }],
-      "destination": "https://bibleco.com/:path*",
-      "permanent": true
-    },
-    {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "www.bibleco.com" }],
-      "destination": "https://bibleco.com/:path*",
-      "permanent": true
-    }
-  ],
   "rewrites": [
     {
       "source": "/(.*)",
