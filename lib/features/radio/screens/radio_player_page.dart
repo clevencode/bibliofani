@@ -478,14 +478,8 @@ class _WebSkipTenRow extends StatelessWidget {
         final ink = enabled
             ? AppTheme.liveStreamBroadcastIconColor(brightness)
             : scheme.onSurface.withValues(alpha: 0.38);
-        final iconSize = (pillHeight * 0.42).clamp(18.0, 24.0);
-        final labelStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: ink,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.15,
-          height: 1.0,
-        );
-        final gapTextIcon = (pillHeight * 0.12).clamp(5.0, 8.0);
+        // replay_10 / forward_10: glifo mais denso — ligeiramente maior que o disco live.
+        final iconSize = (pillHeight * 0.5).clamp(20.0, 28.0);
 
         Widget pill({
           required String semantics,
@@ -548,9 +542,7 @@ class _WebSkipTenRow extends StatelessWidget {
               tooltip: kBibleFmWebFrSeekBack10Tooltip,
               onTap: () => bibleFmWebSeekRelativeSeconds(-10),
               rowChildren: [
-                Text('10s', style: labelStyle),
-                SizedBox(width: gapTextIcon),
-                Icon(Icons.replay_rounded, size: iconSize, color: ink),
+                Icon(Icons.replay_10, size: iconSize, color: ink),
               ],
             ),
             SizedBox(width: pillGap),
@@ -559,9 +551,7 @@ class _WebSkipTenRow extends StatelessWidget {
               tooltip: kBibleFmWebFrSeekForward10Tooltip,
               onTap: () => bibleFmWebSeekRelativeSeconds(10),
               rowChildren: [
-                Icon(Icons.forward_rounded, size: iconSize, color: ink),
-                SizedBox(width: gapTextIcon),
-                Text('10s', style: labelStyle),
+                Icon(Icons.forward_10, size: iconSize, color: ink),
               ],
             ),
           ],
