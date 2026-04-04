@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:bibliofani/core/theme/app_spacing.dart';
+import 'package:bibleco/core/theme/app_spacing.dart';
 
 abstract final class AppTheme {
   static const double notionControlRadius = 4;

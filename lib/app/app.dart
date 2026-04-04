@@ -1,6 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:bibliofani/core/theme/app_theme.dart';
+import 'package:bibleco/core/theme/app_theme.dart';
 
 class _RadioAppScrollBehavior extends MaterialScrollBehavior {
   const _RadioAppScrollBehavior();
@@ -25,9 +25,9 @@ class RadioApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'biblofani',
+      title: 'bibleco',
       debugShowCheckedModeBanner: false,
-      restorationScopeId: 'biblofani_app',
+      restorationScopeId: 'bibleco_app',
       themeMode: ThemeMode.dark,
       theme: AppTheme.dark,
       scrollBehavior: const _RadioAppScrollBehavior(),

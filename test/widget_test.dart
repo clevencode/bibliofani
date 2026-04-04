@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:bibliofani/app/app.dart';
-import 'package:bibliofani/features/radio/screens/radio_player_page.dart';
+import 'package:bibleco/app/app.dart';
+import 'package:bibleco/features/radio/screens/radio_player_page.dart';
 
 void main() {
   testWidgets('App inicia (leitor Web)', (WidgetTester tester) async {

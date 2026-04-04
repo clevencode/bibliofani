@@ -1,7 +1,7 @@
 /// Textos visíveis e de acessibilidade — leitor Web.
 library;
 
-const String kBibleFmSemanticsPlayerPage = 'biblofani, leitor de rádio';
+const String kBibleFmSemanticsPlayerPage = 'bibleco, lecteur radio';
 
 const String kBibleFmWebFrFeedbackReloading = 'connexion…';
 const String kBibleFmWebFrFeedbackBuffering = 'chargement…';
@@ -11,7 +11,7 @@ const String kBibleFmWebFrFeedbackPaused = 'pause';
 const String kBibleFmWebFrFeedbackReady = 'prêt';
 
 /// Chrome / OS media hub (Media Session API) — alinhado ao feedback do leitor.
-const String kBibleFmMediaSessionTitle = 'biblofani';
+const String kBibleFmMediaSessionTitle = 'bibleco';
 const String kBibleFmMediaSessionAlbum = 'Radio biblique';
 
 /// Pause alors qu’on était au direct : combien le flux a avancé sur le serveur.
@@ -40,11 +40,11 @@ const String kBibleFmWebFrBackgroundGestureA11y =
 
 /// Attribut [aria-label] sur l’élément `<audio>` (lecteurs d’écran).
 const String kBibleFmWebFrNativeAudioAriaLabel =
-    'biblofani, flux audio en direct';
+    'bibleco, flux audio en direct';
 
 /// Semantics Flutter autour du [HtmlElementView] (complement au natif).
 const String kBibleFmWebFrNativeAudioSemanticsLabel =
-    'Contrôles audio du navigateur pour biblofani';
+    'Contrôles audio du navigateur pour bibleco';
 const String kBibleFmWebFrNativeAudioSemanticsHint =
     'Lecture, pause et barre de progression sont fournis par votre navigateur.';
 

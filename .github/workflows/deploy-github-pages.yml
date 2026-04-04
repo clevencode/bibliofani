@@ -10,7 +10,7 @@
 # (ajusta `--base-href` abaixo se o nome do repo for outro.)
 #
 # Analytics: ID em web/analytics.js (DEFAULT_GA4_ID). Opcional: fork pode usar
-#   window.__BIBLOFANI_GA4_ID__ num script inline antes de analytics.js.
+#   window.__BIBLECO_GA4_ID__ num script inline antes de analytics.js.
 #
 # 404.html = cópia de index.html → recarregar em subcaminhos no Pages não devolve 404 em branco.
 #

@@ -7,7 +7,7 @@ import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/material.dart';
-import 'package:bibliofani/core/strings/bible_fm_strings.dart';
+import 'package:bibleco/core/strings/bible_fm_strings.dart';
 
 const _kWebCanPlayTimeout = Duration(seconds: 10);
 const _kWebPlayStartTimeout = Duration(seconds: 12);
@@ -28,8 +28,8 @@ html.DivElement? _webAudioControlsWrap;
 
 String? _webLiveStreamBaseUrl;
 
-const _kAudioChromeStyleId = 'biblofani-audio-chrome-style-v1';
-const _kLiveDurationHookScriptId = 'biblofani-duration-hook-script-v1';
+const _kAudioChromeStyleId = 'bibleco-audio-chrome-style-v1';
+const _kLiveDurationHookScriptId = 'bibleco-duration-hook-script-v1';
 
 void _ensureLiveDurationHookScript() {
   if (html.document.getElementById(_kLiveDurationHookScriptId) != null) {
@@ -48,7 +48,7 @@ void _ensureLiveDurationHookScript() {
   }
   w.__bfmLiveDurHookVer = HOOK_VER;
   try {
-    var oldA = document.querySelector('.biblofani-native-audio');
+    var oldA = document.querySelector('.bibleco-native-audio');
     if (oldA && oldA.__bfmDurationHooked) {
       delete oldA.duration;
       oldA.__bfmDurationHooked = false;
@@ -87,7 +87,7 @@ void _ensureLiveDurationHookScript() {
     });
   }
   function tick() {
-    var a = document.querySelector('.biblofani-native-audio');
+    var a = document.querySelector('.bibleco-native-audio');
     if (!a) return;
     install(a);
   }
@@ -105,18 +105,18 @@ void _ensureAudioControlsChromeCss() {
   final style = html.StyleElement()
     ..id = _kAudioChromeStyleId
     ..text = '''
-.biblofani-native-audio {
+.bibleco-native-audio {
   background-color: transparent !important;
   color-scheme: dark !important;
   accent-color: #ffffff !important;
   color: #ffffff !important;
 }
-.biblofani-native-audio::-webkit-media-controls-panel,
-.biblofani-native-audio::-webkit-media-controls-enclosure {
+.bibleco-native-audio::-webkit-media-controls-panel,
+.bibleco-native-audio::-webkit-media-controls-enclosure {
   background-color: rgba(0, 0, 0, 0) !important;
 }
-.biblofani-native-audio::-webkit-media-controls-current-time-display,
-.biblofani-native-audio::-webkit-media-controls-time-remaining-display {
+.bibleco-native-audio::-webkit-media-controls-current-time-display,
+.bibleco-native-audio::-webkit-media-controls-time-remaining-display {
   color: #ffffff !important;
   text-shadow: none !important;
 }
@@ -806,7 +806,7 @@ class WebNativeAudioControls extends StatefulWidget {
 }
 
 class _WebNativeAudioControlsState extends State<WebNativeAudioControls> {
-  static const String _viewType = 'biblofani-chrome-audio';
+  static const String _viewType = 'bibleco-chrome-audio';
   static bool _factoryRegistered = false;
 
   void _syncNativeControlsColorScheme() {
@@ -857,8 +857,8 @@ class _WebNativeAudioControlsState extends State<WebNativeAudioControls> {
         ..controls = true
         ..preload = 'metadata'
         ..src = url
-        ..title = 'biblofani'
-        ..className = 'biblofani-native-audio'
+        ..title = 'bibleco'
+        ..className = 'bibleco-native-audio'
         ..setAttribute('aria-label', kBibleFmWebFrNativeAudioAriaLabel)
         ..style.width = '100%'
         ..style.height = '100%'

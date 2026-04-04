@@ -1,11 +1,11 @@
 {
-    "name": "biblofani — Radio en direct",
-    "short_name": "biblofani",
+    "name": "bibleco",
+    "short_name": "bibleco",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#000000",
     "theme_color": "#000000",
-    "description": "Lecteur web biblofani : streaming en direct, contrôles audio et minuteur de veille.",
+    "description": "Écoutez la Parole de Dieu en direct, à tout moment. Édifiez votre foi chaque jour. Renouvelez votre pensée en écoutant l'écho de la voix de Dieu.",
     "orientation": "any",
     "prefer_related_applications": false,
     "icons": [

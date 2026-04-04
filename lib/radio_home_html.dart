@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
-import 'package:bibliofani/features/radio/screens/radio_player_page.dart'
+import 'package:bibleco/features/radio/screens/radio_player_page.dart'
     deferred as radio;
 
 const Color _kLoaderBackground = Color(0xFF000000);

@@ -1,5 +1,5 @@
-name: bibliofani
-description: "biblofani — aplicação Flutter para Web."
+name: bibleco
+description: "bibleco — Écoutez la Parole de Dieu en direct, à tout moment."
 publish_to: 'none'
 
 version: 1.0.0+1

@@ -3,11 +3,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:bibliofani/core/strings/bible_fm_strings.dart';
-import 'package:bibliofani/core/theme/app_theme.dart';
-import 'package:bibliofani/features/radio/radio_stream_config.dart';
-import 'package:bibliofani/features/radio/widgets/broadcast_signal_icon.dart';
-import 'package:bibliofani/features/radio/widgets/web_native_audio.dart';
+import 'package:bibleco/core/strings/bible_fm_strings.dart';
+import 'package:bibleco/core/theme/app_theme.dart';
+import 'package:bibleco/features/radio/radio_stream_config.dart';
+import 'package:bibleco/features/radio/widgets/broadcast_signal_icon.dart';
+import 'package:bibleco/features/radio/widgets/web_native_audio.dart';
 
 final GlobalKey _kWebTransportCapsule = GlobalKey(
   debugLabel: 'webTransportCapsule',
